@@ -22,6 +22,7 @@ class RouteServiceProvider extends ServiceProvider {
     protected function mapMainRoutes() {
 
         Route::middleware(config('insights.middlewares'))
+            ->name(config('insights.routes_name'))
             ->prefix(config('insights.routes_prefix'))
             ->namespace($this->namespace)
             ->group(__DIR__.'/../../routes/main.php');

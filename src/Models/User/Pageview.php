@@ -5,16 +5,25 @@ namespace MatheusFS\Laravel\Insights\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
 class Pageview extends Model {
+
+    const UPDATED_AT = null;
     
     protected $table = 'user_pageviews';
 
     protected $fillable = [
+        'guard',
         'user_id',
         'browser',
         'screen_width',
         'screen_height',
         'page',
-        'origin',
+        'referrer',
         'seconds_spent'
+    ];
+
+    protected $attributes = [
+        'screen_width' => 0,
+        'screen_height' => 0,
+        'seconds_spent' => 0
     ];
 }

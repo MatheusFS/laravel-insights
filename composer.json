@@ -25,7 +25,10 @@
         "laravel": {
             "providers": [
                 "MatheusFS\\Laravel\\Insights\\ServiceProvider"
-            ]
+            ],
+            "aliases": {
+                "Insights": "MatheusFS\\Laravel\\Insights\\Facade"
+            }
         }
     }
 }

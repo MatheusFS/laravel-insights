@@ -2,7 +2,7 @@
 
 namespace MatheusFS\Laravel\Insights\Http\Controllers;
 
-use Illuminate\Support\Facades\Request;
+use Illuminate\Http\Request;
 use MatheusFS\Laravel\Insights\Models\User\Pageview;
 
 class PageviewController extends Controller {
@@ -19,11 +19,18 @@ class PageviewController extends Controller {
             'pageview.screen_width' => 'required',
             'pageview.screen_height' => 'required',
             'pageview.page' => 'required',
-            'pageview.origin' => 'required',
+            'pageview.referrer' => 'required',
             'pageview.seconds_spent' => 'required',
         ]);
 
         $pageview = Pageview::create($request->pageview);
+
+        return response()->json($pageview);
+    }
+
+    public function update($pageview_id, Request $request){
+    
+        $pageview = Pageview::find($pageview_id)->update($request->pageview);
 
         return response()->json($pageview);
     }

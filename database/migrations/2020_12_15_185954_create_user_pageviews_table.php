@@ -16,7 +16,7 @@ class CreateUserPageviewsTable extends Migration {
             $table->integer('screen_width');
             $table->integer('screen_height');
             $table->string('page');
-            $table->string('origin');
+            $table->string('referrer');
             $table->integer('seconds_spent');
             $table->timestamp('created_at')->useCurrent();
         });
