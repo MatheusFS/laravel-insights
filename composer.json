@@ -1,0 +1,31 @@
+{
+    "name": "matheusfs/laravel-insights",
+    "description": "Insights on a laravel application's usage",
+    "type": "library",
+    "require-dev": {
+        "phpunit/phpunit": "^8.0",
+        "orchestra/testbench": "~3.6.0"
+    },
+    "homepage": "https://github.com/matheusfs/laravel-insights",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Matheus Ferreira",
+            "email": "matheusfs97@gmail.com",
+            "homepage": "https://github.com/MatheusFS"
+        }
+    ],
+    "minimum-stability": "dev",
+    "autoload": {
+        "psr-4": {
+            "MatheusFS\\Laravel\\Insights\\": "src"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "MatheusFS\\Laravel\\Insights\\ServiceProvider"
+            ]
+        }
+    }
+}
