@@ -11,7 +11,8 @@ class CreateUserPageviewsTable extends Migration {
         Schema::create('user_pageviews', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('guard');
-            $table->unsignedBigInteger('user_id');
+            $table->string('user_id');
+            $table->string('ip_address');
             $table->string('browser');
             $table->integer('screen_width');
             $table->integer('screen_height');

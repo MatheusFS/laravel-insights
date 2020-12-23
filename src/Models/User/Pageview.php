@@ -13,6 +13,7 @@ class Pageview extends Model {
     protected $fillable = [
         'guard',
         'user_id',
+        'ip_address',
         'browser',
         'screen_width',
         'screen_height',
