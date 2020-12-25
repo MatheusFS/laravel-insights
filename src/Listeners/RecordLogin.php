@@ -12,6 +12,9 @@ class RecordLogin {
 
         /** @var \Illuminate\Database\Eloquent\Model */
         $model = $event->user;
+
+        if(in_array(get_class($model), config('insights.ignore_models'))) return false;
+
         $user_id = $model->getKey();
 
         $user = config('insights.user_model')::find($user_id);
@@ -19,7 +22,7 @@ class RecordLogin {
         $ip_address = $this->getIp();
         $browser = $_SERVER['HTTP_USER_AGENT'];
 
-        $count = $user->sessions->count();
+        $count = isset($user->sessions) ? $user->sessions->count() : 0;
 
         Login::create([
             'guard' => $event->guard,

@@ -6,6 +6,9 @@ return [
     'routes_prefix' => 'insights',
 
     'user_model' => App\Models\User::class,
+    'ignore_models' => [
+        Encore\Admin\Auth\Database\Administrator::class
+    ],
 
-    'middlewares' => ['auth', 'web']
+    'middlewares' => ['web']
 ];
