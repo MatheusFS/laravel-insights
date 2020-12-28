@@ -27,7 +27,8 @@
                 "MatheusFS\\Laravel\\Insights\\ServiceProvider"
             ],
             "aliases": {
-                "Insights": "MatheusFS\\Laravel\\Insights\\Facade"
+                "Insights": "MatheusFS\\Laravel\\Insights\\Facade",
+                "Analytics": "MatheusFS\\Laravel\\Insights\\Support\\Facades\\Analytics"
             }
         }
     }
