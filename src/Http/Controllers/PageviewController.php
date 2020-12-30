@@ -54,7 +54,11 @@ class PageviewController extends Controller {
 
         ini_set('memory_limit', '1540M');
 
-        $collection = Pageview::select('created_at', 'page')->get();
+        $collection = Analytics::getPageviewsByStartEndDate(
+            Carbon::minValue(),
+            Carbon::maxValue(),
+            $request->limit
+        );
 
         return Analytics::getPageviews($collection, $request->q, $request->take);
     }
