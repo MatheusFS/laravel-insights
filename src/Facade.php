@@ -12,20 +12,14 @@ class Facade {
 
     public static function recordPageview(){
 
-        if(env('INSIGHTS_PAGEVIEW_ENABLED', true)){
-
-            return Pageview::create([
-                'guard' => Auth::getDefaultDriver(),
-                'user_id' => self::getId(),
-                'ip_address' => self::getIp(),
-                'browser' => $_SERVER['HTTP_USER_AGENT'],
-                'page' => request()->url(),
-                'referrer' => $_SERVER['HTTP_REFERER'] ?? 'none'
-            ]);
-        }else{
-
-            Log::debug('Skipped pageview record. INSIGHTS_PAGEVIEW_ENABLED environment key is set to false');
-        }
+        return Pageview::create([
+            'guard' => Auth::getDefaultDriver(),
+            'user_id' => self::getId(),
+            'ip_address' => self::getIp(),
+            'browser' => $_SERVER['HTTP_USER_AGENT'],
+            'page' => request()->url(),
+            'referrer' => $_SERVER['HTTP_REFERER'] ?? 'none'
+        ]);
     }
 
     public static function getId(){

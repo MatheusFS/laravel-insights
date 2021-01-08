@@ -1,3 +1,5 @@
+@if(env('INSIGHTS_PAGEVIEW_ENABLED', true))
+
 <script>
     function put(url, payload){
 
@@ -34,3 +36,5 @@
     window.addEventListener('blur', blur);
     window.addEventListener('beforeunload', beforeunload);
 </script>
+
+@endif
