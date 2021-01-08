@@ -37,7 +37,6 @@ class PageviewController extends Controller {
         return response()->json($pageview);
     }
 
-
     public function byStartEndDate($start, $end) {
 
         ini_set('memory_limit', '2048M');
