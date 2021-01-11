@@ -11,7 +11,7 @@ class Search extends Model {
     protected $table = 'user_searches';
 
     protected $fillable = [
-        // 'user_id',
+        'user_id',
         'query_string'
     ];
 }
