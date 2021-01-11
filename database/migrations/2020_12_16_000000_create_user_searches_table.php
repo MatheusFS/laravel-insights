@@ -14,7 +14,6 @@ class CreateUserSearchesTable extends Migration {
 
             Schema::create(self::TABLE_NAME, function (Blueprint $table) {
                 $table->bigIncrements('id');
-                $table->string('guard');
                 $table->unsignedBigInteger('user_id');
                 $table->string('query_string');
                 $table->timestamp('created_at')->useCurrent();
