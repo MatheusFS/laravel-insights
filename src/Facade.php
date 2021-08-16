@@ -16,7 +16,7 @@ class Facade {
             'guard' => Auth::getDefaultDriver(),
             'user_id' => self::getId(),
             'ip_address' => self::getIp(),
-            'browser' => $_SERVER['HTTP_USER_AGENT'],
+            'browser' => $_SERVER['HTTP_USER_AGENT'] ?? 'undefined',
             'page' => request()->url(),
             'referrer' => $_SERVER['HTTP_REFERER'] ?? 'none'
         ]);
