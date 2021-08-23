@@ -22,7 +22,7 @@ class RecordLogin {
         $ip_address = $this->getIp();
         $browser = $_SERVER['HTTP_USER_AGENT'];
 
-        $count = isset($user->sessions) ? $user->sessions->count() : 0;
+        $count = (isset($user->sessions) ? $user->sessions->count() : 0) + 1;
 
         Login::create([
             'guard' => $event->guard,
