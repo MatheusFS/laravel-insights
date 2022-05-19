@@ -4,7 +4,7 @@
     function put(url, payload){
 
         const _token = '{{ csrf_token() }}';
-        const body = JSON.stringify({ _token, ...payload });
+        const body = JSON.stringify(Object.assign({ _token }, payload));
         const headers = { 'Content-Type': 'application/json' };
         
         return fetch(url, { method: 'PUT', body, headers });
