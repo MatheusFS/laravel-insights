@@ -5,7 +5,7 @@
 
         const _token = '{{ csrf_token() }}';
         const body = JSON.stringify(Object.assign({ _token }, payload));
-        const headers = { 'Content-Type': 'application/json' };
+        const headers = { "Accept": "application/json", "Content-Type": "application/json" };
         
         return fetch(url, { method: 'PUT', body, headers });
     }
