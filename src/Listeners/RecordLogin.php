@@ -20,7 +20,7 @@ class RecordLogin {
         $user = config('insights.user_model')::find($user_id);
 
         $ip_address = $this->getIp();
-        $browser = $_SERVER['HTTP_USER_AGENT'];
+        $browser = $_SERVER['HTTP_USER_AGENT'] ?? 'Agent inaccessable';
 
         $count = (isset($user->sessions) ? $user->sessions->count() : 0) + 1;
 
