@@ -8,6 +8,8 @@ class Login extends Model {
 
     const UPDATED_AT = null;
 
+    protected $touches = ['user'];
+
     protected $table = 'user_logins';
     
     protected $fillable = [
@@ -16,4 +18,6 @@ class Login extends Model {
         'ip_address',
         'browser'
     ];
+
+    public function user(){ return $this->belongsTo(config('insights.user_model')); }
 }
