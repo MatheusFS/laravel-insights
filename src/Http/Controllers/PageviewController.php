@@ -31,8 +31,10 @@ class PageviewController extends Controller {
     }
 
     public function update($pageview_id, Request $request){
-    
-        $pageview = Pageview::find($pageview_id)->update($request->pageview);
+
+        $pageview = Pageview::find($pageview_id);
+
+        if($pageview) $pageview->update($request->pageview);
 
         return response()->json($pageview);
     }
