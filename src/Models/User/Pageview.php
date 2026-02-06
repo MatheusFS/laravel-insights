@@ -3,6 +3,7 @@
 namespace MatheusFS\Laravel\Insights\Models\User;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Pageview extends Model {
 
@@ -28,4 +29,12 @@ class Pageview extends Model {
         'screen_height' => 0,
         'seconds_spent' => 0
     ];
+
+    /**
+     * Relationship: User who made the pageview
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(config('auth.providers.users.model', \App\Models\User::class));
+    }
 }
