@@ -95,16 +95,55 @@ class LogParserService
     }
 
     /**
+     * Expande linhas ALB concatenadas (múltiplas entradas em 1 linha física)
+     *
+     * ALB logs podem estar concatenados sem newlines separadores.
+     * Este método detecta e divide by timestamp pattern (2025-10-21THOUR:MIN:SEC).
+     *
+     * @param  array  $lines  Array potencialmente com linhas concatenadas
+     * @return array Array com linhas expandidas
+     */
+    public function expandConcatenatedLogLines(array $lines): array
+    {
+        $expanded = [];
+
+        foreach ($lines as $line) {
+            // Pattern: timestamp em ISO 8601 com Z suffix (ex: 2025-10-21T16:58:15.295691Z)
+            // Se uma linha contém múltiplos timestamps, dividir por eles
+            
+            $parts = preg_split(
+                '/(?=\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})/',
+                $line,
+                -1,
+                PREG_SPLIT_NO_EMPTY
+            );
+
+            if (count($parts) > 1) {
+                // Linha tinha múltiplas entradas concatenadas
+                $expanded = array_merge($expanded, $parts);
+            } else {
+                // Linha normal, adicionar como está
+                $expanded[] = $line;
+            }
+        }
+
+        return $expanded;
+    }
+
+    /**
      * Parse de múltiplas linhas de log
      *
-     * @param  array  $lines  Array de linhas de log
-     * @return array Array de registros parseados
+     * @param  array  $lines  Array de linhas de log (potencialmente concatenadas)
+     * @return array Array de records parseados
      */
     public function parseLogLines(array $lines): array
     {
         $records = [];
 
-        foreach ($lines as $line) {
+        // Primeiro, expandir linhas concatenadas
+        $expandedLines = $this->expandConcatenatedLogLines($lines);
+
+        foreach ($expandedLines as $line) {
             $parsed = $this->parseLogLine(trim($line));
             if ($parsed !== null) {
                 $records[] = $parsed;
