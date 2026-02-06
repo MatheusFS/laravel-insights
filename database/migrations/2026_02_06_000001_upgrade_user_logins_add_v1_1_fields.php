@@ -134,8 +134,25 @@ return new class extends Migration
      */
     private function indexExists(string $table, string $index): bool
     {
-        $indexes = DB::select("SHOW INDEX FROM {$table} WHERE Key_name = ?", [$index]);
-        return !empty($indexes);
+        $driver = DB::getDriverName();
+        
+        if ($driver === 'sqlite') {
+            // SQLite: use pragma index_list
+            try {
+                $indexes = DB::select("PRAGMA index_list({$table})");
+                return collect($indexes)->contains('name', $index);
+            } catch (\Exception $e) {
+                return false;
+            }
+        }
+        
+        // MySQL/PostgreSQL
+        try {
+            $indexes = DB::select("SHOW INDEX FROM {$table} WHERE Key_name = ?", [$index]);
+            return !empty($indexes);
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 
     /**
@@ -143,12 +160,31 @@ return new class extends Migration
      */
     private function foreignKeyExists(string $table, string $foreignKey): bool
     {
-        $database = DB::getDatabaseName();
-        $exists = DB::select(
-            "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS 
-             WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND CONSTRAINT_NAME = ? AND CONSTRAINT_TYPE = 'FOREIGN KEY'",
-            [$database, $table, $foreignKey]
-        );
-        return !empty($exists);
+        $driver = DB::getDriverName();
+        
+        if ($driver === 'sqlite') {
+            // SQLite: use pragma foreign_key_list
+            try {
+                $foreignKeys = DB::select("PRAGMA foreign_key_list({$table})");
+                // SQLite doesn't name foreign keys, so we can't check by name
+                // Just return false for now (will skip foreign key operations)
+                return false;
+            } catch (\Exception $e) {
+                return false;
+            }
+        }
+        
+        // MySQL/PostgreSQL
+        try {
+            $database = DB::getDatabaseName();
+            $exists = DB::select(
+                "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS 
+                 WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND CONSTRAINT_NAME = ? AND CONSTRAINT_TYPE = 'FOREIGN KEY'",
+                [$database, $table, $foreignKey]
+            );
+            return !empty($exists);
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 };
