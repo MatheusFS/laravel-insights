@@ -158,16 +158,12 @@ class IncidentAnalysisService
                         $metrics = $ipErrorMetrics[$userIp];
                         // Adicionar erro_rate dos ALB logs
                         $albErrors = (int)ceil(($metrics['error_rate'] / 100) * $metrics['total_requests']);
-                        // DEBUG
-                        \Log::info("Enriching user {$user['user_id']} IP {$userIp}: ALB errors={$albErrors}, total_requests={$metrics['total_requests']}, error_rate={$metrics['error_rate']}%");
                         // Somar com erros já contados do DB
                         $user['errors'] += $albErrors;
                         // Atualizar contagem de requests se o ALB teve mais
                         if ($metrics['total_requests'] > $user['requests']) {
                             $user['requests'] = $metrics['total_requests'];
                         }
-                    } else {
-                        \Log::info("IP not found in error metrics: {$userIp}");
                     }
                 }
             }
