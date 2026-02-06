@@ -12,11 +12,15 @@ class RouteServiceProvider extends ServiceProvider {
     public function boot() {
 
         parent::boot();
+        
+        // Laravel 10+: Chamar map() explicitamente
+        $this->map();
     }
 
     public function map() {
         
         $this->mapMainRoutes();
+        $this->mapApiRoutes();
     }
 
     protected function mapMainRoutes() {
@@ -25,6 +29,15 @@ class RouteServiceProvider extends ServiceProvider {
             ->name(config('insights.routes_name'))
             ->prefix(config('insights.routes_prefix'))
             ->namespace($this->namespace)
-            ->group(__DIR__.'/../../routes/main.php');
+            ->group(base_path('vendor/matheusfs/laravel-insights/routes/main.php'));
+    }
+
+    protected function mapApiRoutes() {
+
+        Route::middleware('api')
+            ->name('insights.reliability.')
+            ->prefix('api/insights/reliability')
+            ->namespace($this->namespace)
+            ->group(base_path('vendor/matheusfs/laravel-insights/routes/api.php'));
     }
 }

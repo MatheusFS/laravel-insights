@@ -35,6 +35,14 @@ return [
     'incident_correlation' => [
         'enabled' => true,
 
+        // Storage path para arquivos JSON de incidentes
+        'storage_path' => env('INSIGHTS_STORAGE_PATH', base_path('docs/software-management/reliability')),
+
+        // AWS S3 Configuration for ALB Logs
+        's3_bucket' => env('AWS_INCIDENT_S3_BUCKET', 'refresher-logs'),
+        's3_path' => env('AWS_INCIDENT_S3_PATH', 'AWSLogs/624082998591/elasticloadbalancing/us-east-1'),
+        'aws_region' => env('AWS_REGION', 'us-east-1'),
+
         // IP Classification Thresholds
         'ip_classification' => [
             'malicious' => [
