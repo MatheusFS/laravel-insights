@@ -131,13 +131,46 @@ class IncidentAnalysisService
 
             $analysis = json_decode(File::get($alb_logs_file), true);
             $legitimateIps = $analysis['classified']['legitimate'] ?? [];
+            $suspiciousIps = $analysis['classified']['suspicious'] ?? [];
+            
+            // Combinar IPs legítimos e suspeitos para correlação
+            $allIpsWithMetrics = array_merge($legitimateIps, $suspiciousIps);
+            $ipErrorMetrics = [];
+            foreach ($allIpsWithMetrics as $ipMetric) {
+                $ipErrorMetrics[$ipMetric['ip']] = [
+                    'total_requests' => $ipMetric['total_requests'] ?? 0,
+                    'error_rate' => $ipMetric['error_rate'] ?? 0,
+                ];
+            }
 
             // Delegar para pacote
             $result = $this->correlationService->correlateAffectedUsers(
-                $legitimateIps,
+                $allIpsWithMetrics,
                 ['start' => $startTime, 'end' => $endTime],
                 null // organizationId opcional
             );
+            
+            // Enriquecer usuários com dados de erro dos ALB logs
+            if (isset($result['users'])) {
+                foreach ($result['users'] as &$user) {
+                    $userIp = $user['ip'] ?? null;
+                    if ($userIp && isset($ipErrorMetrics[$userIp])) {
+                        $metrics = $ipErrorMetrics[$userIp];
+                        // Adicionar erro_rate dos ALB logs
+                        $albErrors = (int)ceil(($metrics['error_rate'] / 100) * $metrics['total_requests']);
+                        // DEBUG
+                        \Log::info("Enriching user {$user['user_id']} IP {$userIp}: ALB errors={$albErrors}, total_requests={$metrics['total_requests']}, error_rate={$metrics['error_rate']}%");
+                        // Somar com erros já contados do DB
+                        $user['errors'] += $albErrors;
+                        // Atualizar contagem de requests se o ALB teve mais
+                        if ($metrics['total_requests'] > $user['requests']) {
+                            $user['requests'] = $metrics['total_requests'];
+                        }
+                    } else {
+                        \Log::info("IP not found in error metrics: {$userIp}");
+                    }
+                }
+            }
 
             // Salvar resultado
             $analysis_dir = "{$this->incidents_base_path}/{$incidentId}";
