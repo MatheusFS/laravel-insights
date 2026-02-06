@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Pageview extends Model {
 
     const UPDATED_AT = null;
+    const CREATED_AT = 'created_at';
     
     protected $table = 'user_pageviews';
 

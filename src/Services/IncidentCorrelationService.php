@@ -92,10 +92,10 @@ class IncidentCorrelationService
             ];
         }
 
-        // Buscar em user_pageviews
+        // Buscar em user_pageviews (usa created_at e ip_address padrão)
         $pageviewsQuery = Pageview::query()
-            ->whereBetween('timestamp', [$startTime, $endTime])
-            ->whereIn('ip', $ipsToQuery)
+            ->whereBetween('created_at', [$startTime, $endTime])
+            ->whereIn('ip_address', $ipsToQuery)
             ->with('user:id,name,email');
 
         if ($organizationId) {
@@ -139,7 +139,7 @@ class IncidentCorrelationService
             $userId = $pv->user->id;
             if (! isset($affectedUsers[$userId])) {
                 $affectedUsers[$userId] = [
-                    'ip' => $pv->ip,
+                    'ip' => $pv->ip_address,
                     'user_id' => $userId,
                     'name' => $pv->user->name,
                     'email' => $pv->user->email,
@@ -159,7 +159,7 @@ class IncidentCorrelationService
             $userId = $login->user->id;
             if (! isset($affectedUsers[$userId])) {
                 $affectedUsers[$userId] = [
-                    'ip' => $login->ip,
+                    'ip' => $login->ip_address,
                     'user_id' => $userId,
                     'name' => $login->user->name,
                     'email' => $login->user->email,
