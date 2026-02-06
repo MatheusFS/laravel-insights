@@ -35,15 +35,15 @@ return [
     'incident_correlation' => [
         'enabled' => true,
 
-        // Storage path para arquivos JSON de incidentes
+        // Storage path para arquivos JSON de incidentes (não-sensível, versionado)
         'storage_path' => env('INSIGHTS_STORAGE_PATH', base_path('docs/software-management/reliability')),
 
-        // AWS S3 Configuration for ALB Logs
+        // AWS S3 Configuration for ALB Logs (sensível - no .env)
         's3_bucket' => env('AWS_INCIDENT_S3_BUCKET', 'refresher-logs'),
         's3_path' => env('AWS_INCIDENT_S3_PATH', 'AWSLogs/624082998591/elasticloadbalancing/us-east-1'),
-        'aws_region' => env('AWS_REGION', 'us-east-1'),
+        'aws_region' => 'us-east-1', // Públicamente conhecido
 
-        // IP Classification Thresholds
+        // IP Classification Thresholds (não-sensível, versionado)
         'ip_classification' => [
             'malicious' => [
                 'error_rate_min' => 0.95, // 95% de erros
@@ -55,11 +55,69 @@ return [
             ],
         ],
 
-        // Time Window para correlação
+        // Time Window para correlação (não-sensível, versionado)
         'default_lookback_hours' => 24,
+    ],
 
-        // Storage path para incident files
-        'storage_path' => storage_path('app/incidents'),
+    // ========================================
+    // SRE METRICS (CONTINUOUS ALB LOGS)
+    // ========================================
+
+    // Storage path para arquivos de SRE metrics (não-sensível, versionado)
+    'sre_metrics_storage' => storage_path('app/sre_metrics'),
+
+    // Configuração de fonte de logs ALB (não-sensível, versionado)
+    'alb_logs' => [
+        // Fonte de logs ALB para SRE metrics: 'local', 's3', ou 'cloudwatch'
+        'source' => env('ALB_LOG_SOURCE', 's3'),
+        
+        // AWS S3 Configuration for SRE Metrics (sensível - bucket no .env)
+        's3' => [
+            'bucket' => env('AWS_ALB_LOGS_BUCKET', 'refresher-logs'),
+            'path' => env('AWS_ALB_LOGS_PATH', 'AWSLogs/624082998591/elasticloadbalancing/us-east-1'),
+            'region' => 'us-east-1', // Públicamente conhecido
+        ],
+        
+        // CloudWatch Configuration (se usar cloudwatch como source)
+        'cloudwatch' => [
+            'log_group' => env('AWS_CLOUDWATCH_LOG_GROUP', '/aws/elasticloadbalancing/refresher'),
+            'region' => 'us-east-1',
+        ],
+    ],
+
+    // SLO/SLA targets por tipo de serviço (não-sensível, versionado)
+    'sre_targets' => [
+        'API' => [
+            'slo' => 98.5,      // SLO (meta operacional) em %
+            'sla' => 95.0,      // SLA (compromisso contratual) em %
+        ],
+        'UI' => [
+            'slo' => 98.0,      // SLO para UI (geralmente mais relaxado)
+            'sla' => 95.0,      // SLA para UI
+        ],
+        'BOT' => [
+            'slo' => 95.0,      // SLO para bots (mais lenientes)
+            'sla' => 90.0,      // SLA para bots
+        ],
+        'ASSETS' => [
+            'slo' => 99.5,      // SLO para assets (CDN/high availability)
+            'sla' => 98.0,      // SLA para assets
+        ],
+    ],
+
+    // Configurações de análise de logs (não-sensível, versionado)
+    'alb_analysis' => [
+        'enabled' => true,
+        'batch_size' => 10000,        // Processar X linhas por lote
+        'timeout_seconds' => 300,     // Timeout máximo por lote
+        'exclude_bots' => [
+            'bot',
+            'crawler',
+            'spider',
+            'scraper',
+            'curl',
+            'wget',
+        ],
     ],
 
     // ========================================

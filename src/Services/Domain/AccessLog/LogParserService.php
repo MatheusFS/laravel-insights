@@ -11,33 +11,6 @@ namespace MatheusFS\Laravel\Insights\Services\Domain\AccessLog;
 class LogParserService
 {
     /**
-     * Classifica tipo de request baseado no path
-     */
-    public function classifyRequestType(string $path): string
-    {
-        // API requests
-        if (str_starts_with($path, '/api/')) {
-            return 'API';
-        }
-
-        // Asset extensions
-        $assetExtensions = [
-            '.js', '.css', '.png', '.jpg', '.jpeg', '.gif', '.svg',
-            '.woff', '.woff2', '.ttf', '.eot', '.ico', '.webp',
-            '.map', '.json',
-        ];
-
-        foreach ($assetExtensions as $ext) {
-            if (str_ends_with($path, $ext)) {
-                return 'ASSETS';
-            }
-        }
-
-        // Tudo resto é UI (HTML pages)
-        return 'UI';
-    }
-
-    /**
      * Parse de linha de log ALB
      *
      * @param  string  $line  Linha bruta do log
@@ -90,7 +63,6 @@ class LogParserService
             'user_agent' => $userAgent,
             'ssl_cipher' => $matches[17],
             'ssl_protocol' => $matches[18],
-            'request_type' => $this->classifyRequestType($path),
         ];
     }
 
@@ -110,6 +82,34 @@ class LogParserService
                 $records[] = $parsed;
             }
         }
+
+        return $records;
+    }
+
+    /**
+     * Parse de arquivo de log ALB
+     *
+     * @param  string  $file_path  Caminho do arquivo .log
+     * @return array Array de registros parseados
+     */
+    public function parseLogFile(string $file_path): array
+    {
+        if (! file_exists($file_path)) {
+            \Log::warning("ALB log file not found: {$file_path}");
+            return [];
+        }
+
+        $lines = file($file_path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $total_lines = count($lines);
+        
+        $records = $this->parseLogLines($lines);
+        $parsed_count = count($records);
+
+        \Log::info("Parsed ALB log file: {$file_path}", [
+            'total_lines' => $total_lines,
+            'parsed_count' => $parsed_count,
+            'success_rate' => $total_lines > 0 ? round(($parsed_count / $total_lines) * 100, 2) . '%' : '0%',
+        ]);
 
         return $records;
     }

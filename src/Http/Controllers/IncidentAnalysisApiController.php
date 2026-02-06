@@ -7,6 +7,8 @@ use MatheusFS\Laravel\Insights\Http\Requests\ApplyWAFRulesRequest;
 use MatheusFS\Laravel\Insights\Http\Requests\CorrelateUsersRequest;
 use MatheusFS\Laravel\Insights\Http\Requests\GenerateWAFRulesRequest;
 use MatheusFS\Laravel\Insights\Services\Application\IncidentAnalysisService;
+use MatheusFS\Laravel\Insights\Services\Domain\Metrics\SREMetricsCalculator;
+use MatheusFS\Laravel\Insights\Contracts\ALBLogDownloaderInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 
@@ -19,7 +21,9 @@ use Illuminate\Routing\Controller;
 class IncidentAnalysisApiController extends Controller
 {
     public function __construct(
-        private IncidentAnalysisService $analysisService
+        private IncidentAnalysisService $analysisService,
+        private SREMetricsCalculator $sreMetrics,
+        private ALBLogDownloaderInterface $albDownloader
     ) {}
 
     /**
@@ -361,4 +365,73 @@ class IncidentAnalysisApiController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * GET /api/insights/reliability/sre-metrics
+     *
+     * Calcula métricas SRE (SLI, SLO, SLA, Error Budget) de logs contínuos
+     * 
+     * Query params:
+     * - month: Período em formato Y-m (padrão: mês atual, ex: 2026-02)
+     * - slo_target: Meta SLO (padrão: 98.5%)
+     * - sla_target: Meta SLA (padrão: 95%)
+     * 
+     * Retorna métricas separadas por serviço (API e UI)
+     * Fonte de dados: Logs ALB agregados diariamente (contínuos)
+     */
+    public function calculateSREMetrics(): JsonResponse
+    {
+        try {
+            // Use config defaults for API (can be overridden via query params)
+            $slo_target = (float) request()->query('slo_target', config('insights.sre_targets.API.slo'));
+            $sla_target = (float) request()->query('sla_target', config('insights.sre_targets.API.sla'));
+            $month = request()->query('month', now()->format('Y-m'));
+
+            // Validar formato do mês
+            if (!preg_match('/^\d{4}-\d{2}$/', $month)) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Invalid month format. Use YYYY-MM (e.g., 2026-02)',
+                ], 422);
+            }
+
+            // Usar novo método com logs contínuos
+            $this->sreMetrics->setALBDownloader($this->albDownloader);
+            $metrics = $this->sreMetrics->calculateMonthlyFromContinuousLogs(
+                $month,
+                $slo_target,
+                $sla_target
+            );
+
+            return response()->json([
+                'success' => true,
+                'data' => $metrics,
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 500);
+        } catch (\Exception $e) {
+            \Log::error('SRE Metrics Error: ' . $e->getMessage(), [
+                'exception' => $e,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to calculate SRE metrics',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Alias para calculateSREMetrics (compatibilidade com antiga rota)
+     */
+    public function sreMonthlyMetrics(): JsonResponse
+    {
+        return $this->calculateSREMetrics();
+    }
+
 }
+

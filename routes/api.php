@@ -45,3 +45,14 @@ Route::prefix('incidents/{incidentId}')
         Route::post('apply-waf-rules', [IncidentAnalysisApiController::class, 'applyWafRules'])
             ->name('apply-waf-rules');
     });
+
+// GET /api/insights/reliability/sre-metrics
+// Retorna métricas SRE (SLI, SLO, SLA, Error Budget) para um período
+// Query params: ?month=2026-02&slo_target=98.5&sla_target=95.0
+Route::get('sre-metrics', [IncidentAnalysisApiController::class, 'calculateSREMetrics'])
+    ->name('sre-metrics');
+
+// GET /api/insights/reliability/sre-metrics/monthly (DEPRECATED)
+// Use /sre-metrics instead
+Route::get('sre-metrics/monthly', [IncidentAnalysisApiController::class, 'sreMonthlyMetrics'])
+    ->name('sre-metrics.monthly');

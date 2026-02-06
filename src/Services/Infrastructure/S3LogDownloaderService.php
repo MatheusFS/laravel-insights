@@ -20,9 +20,14 @@ class S3LogDownloaderService
 
     public function __construct()
     {
-        $this->s3Bucket = config('insights.incident_correlation.s3_bucket', 'refresher-logs');
-        $this->s3Path = config('insights.incident_correlation.s3_path', 'AWSLogs/624082998591/elasticloadbalancing/us-east-1');
-        $this->localBasePath = config('insights.incident_correlation.storage_path', storage_path('app/incidents')) . '/.raw_logs';
+        // Priorizar config de 's3_logs' (para SRE metrics), fallback para 'incident_correlation'
+        $this->s3Bucket = config('insights.s3_logs.bucket') 
+            ?? config('insights.incident_correlation.s3_bucket', 'refresher-logs');
+        
+        $this->s3Path = config('insights.s3_logs.path') 
+            ?? config('insights.incident_correlation.s3_path', 'AWSLogs/624082998591/elasticloadbalancing/us-east-1');
+        
+        $this->localBasePath = config('insights.sre_metrics_path', storage_path('app/sre_metrics')) . '/.raw_logs';
 
         // Garantir que diretório base existe
         if (!File::isDirectory($this->localBasePath)) {
@@ -44,7 +49,8 @@ class S3LogDownloaderService
     public function downloadLogsForIncident(
         string $incidentId,
         Carbon $startedAt,
-        Carbon $restoredAt
+        Carbon $restoredAt,
+        bool $useMargins = true
     ): array {
         // Criar pasta específica para o incidente
         $incidentPath = $this->localBasePath . '/' . $incidentId;
@@ -52,23 +58,46 @@ class S3LogDownloaderService
             File::makeDirectory($incidentPath, 0755, true);
         }
 
-        // Determinar período de logs a buscar (com margem de 1 hora antes/depois)
-        $searchStartDate = $startedAt->clone()->subHour();
-        $searchEndDate = $restoredAt->clone()->addHour();
+        // Determinar período de logs a buscar
+        // Para incidentes: margem de 1 hora antes/depois
+        // Para SRE metrics: período exato (datas já em UTC)
+        if ($useMargins) {
+            $searchStartDate = $startedAt->clone()->subHour();
+            $searchEndDate = $restoredAt->clone()->addHour();
+        } else {
+            $searchStartDate = $startedAt->clone();
+            $searchEndDate = $restoredAt->clone();
+        }
 
-        // Gerar lista de prefixos S3 para as datas (YYYY/MM/DD/HH)
+        // Gerar lista de prefixos S3 para as datas (YYYY/MM/DD/)
         $s3Prefixes = $this->generateS3Prefixes($searchStartDate, $searchEndDate);
 
         $downloadedCount = 0;
+        $totalPrefixes = count($s3Prefixes);
+
+        \Log::info("Starting S3 download for {$incidentId}", [
+            'period' => "{$searchStartDate->toDateString()} to {$searchEndDate->toDateString()}",
+            'prefixes_to_download' => $totalPrefixes,
+            'prefixes' => $s3Prefixes,
+        ]);
 
         // Baixar logs de cada prefix
-        foreach ($s3Prefixes as $prefix) {
+        foreach ($s3Prefixes as $index => $prefix) {
+            $currentIndex = $index + 1;
+            \Log::info("Downloading from S3 prefix [{$currentIndex}/{$totalPrefixes}]: {$prefix}");
+            
             $logsInPrefix = $this->downloadLogsFromPrefix($prefix, $incidentPath);
             $downloadedCount += $logsInPrefix;
+            
+            \Log::info("Downloaded {$logsInPrefix} files from {$prefix}");
         }
 
+        \Log::info("Total files downloaded: {$downloadedCount}");
+        
         // Descompactar todos os .gz
+        \Log::info("Starting extraction of .gz files...");
         $extractedCount = $this->extractGzFiles($incidentPath);
+        \Log::info("Extracted {$extractedCount} files");
 
         return [
             'incident_id' => $incidentId,
@@ -85,16 +114,26 @@ class S3LogDownloaderService
     /**
      * Gera lista de prefixos S3 para um período de datas
      *
-     * @param  Carbon  $startDate
-     * @param  Carbon  $endDate
-     * @return array Lista de prefixos (YYYY/MM/DD/HH)
+     * IMPORTANTE: Converte para UTC antes de gerar prefixos pois ALB grava logs em UTC
+     * Itera por DIAS (não horas) para evitar prefixos duplicados
+     * 
+     * Nota: $endDate = startOfDay(proxDay), então usa lt() ao invés de lte()
+     *
+     * @param  Carbon  $startDate Data início (qualquer timezone)
+     * @param  Carbon  $endDate Data fim (qualquer timezone)
+     * @return array Lista de prefixos (YYYY/MM/DD/)
      */
     private function generateS3Prefixes(Carbon $startDate, Carbon $endDate): array
     {
         $prefixes = [];
-        $current = $startDate->clone()->startOfHour();
+        
+        // Converter para UTC pois ALB grava logs em UTC
+        // Usar startOfDay para ambas
+        $current = $startDate->clone()->setTimezone('UTC')->startOfDay();
+        $end = $endDate->clone()->setTimezone('UTC')->startOfDay();
 
-        while ($current->lte($endDate)) {
+        // Usar lt() pois end = startOfDay do próximo dia
+        while ($current->lt($end)) {
             $prefix = sprintf(
                 '%d/%02d/%02d/',
                 $current->year,
@@ -102,11 +141,8 @@ class S3LogDownloaderService
                 $current->day
             );
 
-            if (!in_array($prefix, $prefixes)) {
-                $prefixes[] = $prefix;
-            }
-
-            $current->addHour();
+            $prefixes[] = $prefix;
+            $current->addDay();
         }
 
         return $prefixes;
@@ -124,15 +160,31 @@ class S3LogDownloaderService
         $s3Path = $this->s3Path . '/' . $prefix;
 
         try {
-            $s3 = Storage::disk('s3');
+            // Usar AWS SDK S3Client diretamente
+            $s3Client = new \Aws\S3\S3Client([
+                'version' => 'latest',
+                'region' => config('insights.s3_logs.region', config('filesystems.disks.s3.region', 'us-east-1')),
+                'credentials' => [
+                    'key' => config('filesystems.disks.s3.key'),
+                    'secret' => config('filesystems.disks.s3.secret'),
+                ],
+            ]);
 
-            // Listar arquivos no prefixo
-            $files = $s3->listContents($s3Path);
+            $result = $s3Client->listObjectsV2([
+                'Bucket' => $this->s3Bucket,
+                'Prefix' => $s3Path,
+            ]);
+
+            if (!isset($result['Contents'])) {
+                return 0;
+            }
 
             $count = 0;
-            foreach ($files as $file) {
-                if ($file['type'] === 'file' && str_ends_with($file['path'], '.log.gz')) {
-                    $filename = basename($file['path']);
+            foreach ($result['Contents'] as $object) {
+                $key = $object['Key'];
+                
+                if (str_ends_with($key, '.log.gz')) {
+                    $filename = basename($key);
                     $localFile = $localPath . '/' . $filename;
 
                     // Não baixar se já existe
@@ -141,8 +193,12 @@ class S3LogDownloaderService
                     }
 
                     // Baixar arquivo
-                    $content = $s3->get($file['path']);
-                    File::put($localFile, $content);
+                    $result = $s3Client->getObject([
+                        'Bucket' => $this->s3Bucket,
+                        'Key' => $key,
+                    ]);
+                    
+                    File::put($localFile, $result['Body']->getContents());
                     $count++;
                 }
             }
