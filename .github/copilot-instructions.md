@@ -1,0 +1,1 @@
+Para usar php neste projeto (laravel-insights), use: `docker exec laravel-insights-fpm-1 ...`

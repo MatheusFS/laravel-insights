@@ -44,13 +44,16 @@ class S3LogDownloaderService
      * @param  string  $incidentId  ID do incidente (ex: INC-2026-001)
      * @param  Carbon  $startedAt   Data/hora de início do incidente
      * @param  Carbon  $restoredAt  Data/hora de restauração
+     * @param  bool    $useMargins  Se deve usar margem de 1h antes/depois
+     * @param  bool    $forceExtraction  Se deve forçar re-extração mesmo com .log existente
      * @return array Array com caminho local e quantidade de logs baixados
      */
     public function downloadLogsForIncident(
         string $incidentId,
         Carbon $startedAt,
         Carbon $restoredAt,
-        bool $useMargins = true
+        bool $useMargins = true,
+        bool $forceExtraction = false
     ): array {
         // Criar pasta específica para o incidente
         $incidentPath = $this->localBasePath . '/' . $incidentId;
@@ -96,7 +99,7 @@ class S3LogDownloaderService
         
         // Descompactar todos os .gz
         \Log::info("Starting extraction of .gz files...");
-        $extractedCount = $this->extractGzFiles($incidentPath);
+        $extractedCount = $this->extractGzFiles($incidentPath, $forceExtraction);
         \Log::info("Extracted {$extractedCount} files");
 
         return [
@@ -213,17 +216,34 @@ class S3LogDownloaderService
     /**
      * Extrai todos os arquivos .gz em um diretório
      *
+     * Implementa cache de extração: se .log já existe, pula a extração
+     * exceto quando $forceExtraction=true (para casos de re-processamento).
+     *
+     * Lógica de Eficiência:
+     * - Sem --force: Pula .gz download (se existe) + pula .log extraction (se existe)
+     *   → Resultado: S3 API economizada + CPU economizada ✅
+     * - Com --force: Re-baixa .gz do S3 + re-extrai .log
+     *   → Resultado: Re-processa desde a origem (force refresh) ✅
+     *
      * @param  string  $dirPath  Caminho do diretório
+     * @param  bool    $forceExtraction  Se true, extrai mesmo com .log existente
      * @return int Quantidade de arquivos extraídos
      */
-    private function extractGzFiles(string $dirPath): int
+    private function extractGzFiles(string $dirPath, bool $forceExtraction = false): int
     {
         $count = 0;
+        $skipped = 0;
 
         $gzFiles = glob($dirPath . '/*.gz');
         foreach ($gzFiles as $gzFile) {
             try {
                 $outputFile = substr($gzFile, 0, -3); // Remove .gz
+
+                // Cache: pula extração se .log já existe, exceto com --force
+                if (File::exists($outputFile) && !$forceExtraction) {
+                    $skipped++;
+                    continue;
+                }
 
                 // Executar gunzip
                 exec("gunzip -f " . escapeshellarg($gzFile), $output, $returnCode);
@@ -234,6 +254,10 @@ class S3LogDownloaderService
             } catch (\Exception $e) {
                 \Log::warning("Failed to extract {$gzFile}: {$e->getMessage()}");
             }
+        }
+
+        if ($skipped > 0) {
+            \Log::info("Extraction cache: skipped {$skipped} .log files already extracted");
         }
 
         return $count;

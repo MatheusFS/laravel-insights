@@ -57,7 +57,9 @@ class S3ALBLogDownloader implements ALBLogDownloaderInterface
 
         try {
             // Baixar logs do S3 para este dia
-            $raw_logs = $this->fetchLogsFromS3($date);
+            // Passar $options['force'] para que S3LogDownloaderService
+            // saiba se deve re-extrair .log mesmo se já existe
+            $raw_logs = $this->fetchLogsFromS3($date, $options);
 
             Log::info("About to analyze {$date->format('Y-m-d')}", [
                 'raw_logs_count' => count($raw_logs),
@@ -164,7 +166,7 @@ class S3ALBLogDownloader implements ALBLogDownloaderInterface
      * @param Carbon $date
      * @return array Array de entradas de log parseadas
      */
-    private function fetchLogsFromS3(Carbon $date): array
+    private function fetchLogsFromS3(Carbon $date, array $options = []): array
     {
         // Simular incidente para o dia (usa período de 24h)
         $incident_id = 'SRE-' . $date->format('Y-m-d');
@@ -175,11 +177,14 @@ class S3ALBLogDownloader implements ALBLogDownloaderInterface
 
         // Usar S3LogDownloaderService para baixar logs
         // useMargins=false porque queremos período exato do dia (sem 1h antes/depois)
+        // Passar $options['force'] para forçar re-extração se necessário
+        $forceExtraction = $options['force'] ?? false;
         $result = $this->s3_service->downloadLogsForIncident(
             $incident_id,
             $started_at,
             $restored_at,
-            false // Sem margens - período exato
+            false, // Sem margens - período exato
+            $forceExtraction // Passar force para a extração
         );
 
         // Listar arquivos .log baixados

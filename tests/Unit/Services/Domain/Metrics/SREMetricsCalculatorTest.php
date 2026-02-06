@@ -142,7 +142,9 @@ class SREMetricsCalculatorTest extends TestCase
     {
         $result = $this->calculator->calculateForService(
             total_requests: 0,
-            total_5xx: 0
+            total_5xx: 0,
+            slo_target: 98.5,
+            sla_target: 95.0
         );
 
         // Deve retornar métricas vazias mas válidas
@@ -231,7 +233,9 @@ class SREMetricsCalculatorTest extends TestCase
     {
         $result = $this->calculator->calculateForService(
             total_requests: -100,
-            total_5xx: -10
+            total_5xx: -10,
+            slo_target: 98.5,
+            sla_target: 95.0
         );
 
         // Deve retornar métricas vazias para valores inválidos

@@ -38,6 +38,27 @@ class LogParserServiceTest extends TestCase
         }
     }
 
+    public function test_classifies_assets_by_file_extension(): void
+    {
+        // Test files with extensions that can be anywhere
+        $paths = [
+            '/download/style.css',
+            '/docs/manual.pdf',
+            '/public/logo.svg',
+            '/uploads/image.jpg',
+            '/static/script.js',
+            '/app/theme.scss',
+            '/data/archive.zip',
+            '/media/video.mp4',
+            '/libs/font.woff2',
+        ];
+
+        foreach ($paths as $path) {
+            $result = $this->parser->classifyRequestType($path);
+            $this->assertEquals('ASSETS', $result, "Failed for path: {$path}");
+        }
+    }
+
     public function test_classifies_ui_request_correctly(): void
     {
         $paths = [
@@ -142,5 +163,82 @@ class LogParserServiceTest extends TestCase
 
         $this->assertEquals(12345, $result['received_bytes']);
         $this->assertEquals(67890, $result['sent_bytes']);
+    }
+
+    public function test_classifies_bot_request_correctly(): void
+    {
+        $botUserAgents = [
+            'Mozilla/5.0 (compatible; Googlebot/2.1)',
+            'Mozilla/5.0 (compatible; bingbot/2.0)',
+            'Mozilla/5.0 (compatible; Uptimerobot/2.0)',
+            'python-requests/2.28.1',
+            'curl/7.85.0',
+        ];
+
+        foreach ($botUserAgents as $userAgent) {
+            $result = $this->parser->classifyRequestType('/dashboard', $userAgent);
+            $this->assertEquals('BOT', $result, "Failed for user-agent: {$userAgent}");
+        }
+    }
+
+    public function test_parses_bot_request_correctly(): void
+    {
+        $line = 'https 2026-02-03T10:15:32.123456Z app/refresher-alb/abc123 192.168.1.100:54321 10.0.1.50:80 0.001 0.050 0.000 200 200 1234 5678 "GET /robots.txt HTTP/1.1" "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" ECDHE-RSA-AES128-GCM-SHA256 TLSv1.2';
+
+        $result = $this->parser->parseLogLine($line);
+
+        $this->assertNotNull($result);
+        $this->assertEquals('BOT', $result['request_type']);
+        $this->assertEquals('Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)', $result['user_agent']);
+    }
+
+    public function test_human_request_not_classified_as_bot(): void
+    {
+        $humanUserAgents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X)',
+            'Mozilla/5.0 (Linux; Android 12)',
+        ];
+
+        foreach ($humanUserAgents as $userAgent) {
+            $result = $this->parser->classifyRequestType('/dashboard', $userAgent);
+            $this->assertEquals('UI', $result, "Failed for user-agent: {$userAgent}");
+        }
+    }
+
+    public function test_classifies_malicious_request_as_bot(): void
+    {
+        $maliciousPaths = [
+            '/wp-admin',
+            '/wp-login.php',
+            '/xmlrpc.php',
+            '/.env',
+            '/.git',
+            '/.svn',
+            '/.htaccess',
+            '/phpmyadmin',
+            '/shell.php',
+            '/adminer.php',
+            '/../etc/passwd',
+            '/..\\windows\\system32',
+            '/phpinfo.php',
+            '_ignition/execute-solution',
+        ];
+
+        foreach ($maliciousPaths as $path) {
+            $result = $this->parser->classifyRequestType($path);
+            $this->assertEquals('BOT', $result, "Failed for path: {$path}");
+        }
+    }
+
+    public function test_parses_malicious_request_correctly(): void
+    {
+        $line = 'https 2026-02-03T10:15:32.123456Z app/refresher-alb/abc123 192.168.1.100:54321 10.0.1.50:80 0.001 0.050 0.000 404 404 1234 5678 "GET /.env HTTP/1.1" "curl/7.85.0" ECDHE-RSA-AES128-GCM-SHA256 TLSv1.2';
+
+        $result = $this->parser->parseLogLine($line);
+
+        $this->assertNotNull($result);
+        $this->assertEquals('BOT', $result['request_type']);
+        $this->assertEquals('/.env', $result['path']);
     }
 }

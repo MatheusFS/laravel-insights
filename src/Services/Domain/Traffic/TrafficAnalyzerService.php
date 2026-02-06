@@ -28,14 +28,8 @@ class TrafficAnalyzerService
 
         // Agrupar registros e rastrear erros
         foreach ($records as $record) {
-            $path = $record['path'] ?? '';
-
-            // Classificar se é bot/scanner malicioso ANTES de processar
-            if ($this->isMaliciousRequest($path)) {
-                $type = 'BOT';
-            } else {
-                $type = $this->resolveRequestType($path, $record['request_type'] ?? 'UI');
-            }
+            // Usar request_type já classificado pelo LogParserService
+            $type = $record['request_type'] ?? 'UI';
 
             $recordsByType[$type][] = $record;
 
@@ -44,6 +38,7 @@ class TrafficAnalyzerService
             if ($statusCode >= 400) {
                 $errorsByType[$type]['total']++;
                 $errorsByType[$type]['ips'][$record['client_ip']] = true;
+                $path = $record['path'] ?? '';
                 $errorsByType[$type]['paths'][$path] =
                     ($errorsByType[$type]['paths'][$path] ?? 0) + 1;
 
@@ -75,105 +70,6 @@ class TrafficAnalyzerService
         }
 
         return $results;
-    }
-
-    /**
-     * Resolve o tipo de request com base no path real (URL completa ou path).
-     */
-    private function resolveRequestType(string $path, string $fallbackType): string
-    {
-        $normalizedPath = $this->normalizePath($path);
-
-        if ($this->isApiPath($normalizedPath)) {
-            return 'API';
-        }
-
-        return $fallbackType;
-    }
-
-    /**
-     * Normaliza para apenas o path (remove scheme/host/port quando presente)
-     */
-    private function normalizePath(string $path): string
-    {
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-            $parsed = parse_url($path);
-            $parsedPath = $parsed['path'] ?? '/';
-            $query = isset($parsed['query']) ? '?'.$parsed['query'] : '';
-            return $parsedPath.$query;
-        }
-
-        return $path;
-    }
-
-    /**
-     * Identifica se é chamada de API
-     */
-    private function isApiPath(string $path): bool
-    {
-        return str_starts_with($path, '/api/') || str_starts_with($path, 'api/');
-    }
-
-    /**
-     * Identifica se é uma requisição maliciosa (scanner/bot)
-     *
-     * @param  string  $path  Path da requisição
-     * @return bool True se for malicioso
-     */
-    private function isMaliciousRequest(string $path): bool
-    {
-        $maliciousPatterns = [
-            // Staging host (fora do impacto ao usuário final)
-            'staging.refresher.com.br',
-
-            // WordPress exploits
-            'wp-login.php',
-            'xmlrpc.php',
-            'wp-admin',
-            'wp-content',
-            'wp-includes',
-
-            // Laravel exploits
-            '_ignition/execute-solution',
-            '_ignition/health-check',
-
-            // Info disclosure
-            'phpinfo.php',
-            'info.php',
-            '.env',
-            '.git',
-            '.svn',
-            '.htaccess',
-
-            // Common exploits
-            'wpo.php',
-            'shell.php',
-            'c99.php',
-            'r57.php',
-            'adminer.php',
-            'test.php',
-            'php.php',
-            'phpversion.php',
-            'phpmyadmin',
-            'pma',
-            'enclas.php',
-            'tgrs.php',
-            'i.php',
-            'error.php',
-            'shellalfa.php',
-
-            // Path traversal attempts
-            '../',
-            '..\\',
-        ];
-
-        foreach ($maliciousPatterns as $pattern) {
-            if (stripos($path, $pattern) !== false) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**
