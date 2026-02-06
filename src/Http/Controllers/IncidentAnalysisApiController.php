@@ -244,7 +244,7 @@ class IncidentAnalysisApiController extends Controller
     {
         $storage_path = config('insights.incident_correlation.storage_path', storage_path('app/insights'));
         $incidents_dir = $storage_path.'/incidents/'.$incidentId;
-        $impact_file = $incidents_dir.'/impact.json';
+        $impact_file = $incidents_dir.'/incident_metrics.json';
 
         if (!file_exists($impact_file)) {
             return response()->json([
