@@ -1,0 +1,7 @@
+{
+    "config": {
+        "process-timeout":      10000,
+        "preferred-install":    "dist",
+        "github-protocols":     ["https"]
+    }
+}

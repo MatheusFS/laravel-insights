@@ -1,0 +1,34 @@
+services:
+  code:
+    image: busybox
+    volumes:
+      - "./:/var/www/html"
+
+  fpm:
+    image: matheusfs/fpm
+    # links:
+    #   - database
+    #   - redis
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+      - 1.1.1.1
+    volumes:
+      - ".docker/php.ini:/usr/local/etc/php/php.ini"
+      - ".docker/opcache.ini:/usr/local/etc/php/conf.d/opcache.ini"
+      - ".docker/fpm.conf:/usr/local/etc/php-fpm.conf"
+      - ".docker/www.conf:/usr/local/etc/php-fpm.d/www.conf"
+      - ".docker/fpm/config.json:/home/fpm/.composer/config.json"
+      - ".docker/fpm/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini"
+      - ".docker/fpm/xdebug-profiles:/tmp/xdebug/profiler"
+      - ".docker/fpm/auth.json:/home/fpm/.composer/auth.json:rw"
+      - ~/.aws:/home/fpm/.aws:ro
+    volumes_from:
+      - code
+    build:
+      context: .
+    mem_limit: "${FPM_MEM_LIMIT:-512m}"
+
+networks:
+  default:
+    driver: bridge
