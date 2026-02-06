@@ -60,7 +60,7 @@ class IncidentAnalysisService
                 $restored_at
             );
 
-            if ($download_result['count'] === 0) {
+            if ($download_result['downloaded_count'] === 0) {
                 throw new \RuntimeException("No logs downloaded from S3 for {$incidentId}");
             }
 
