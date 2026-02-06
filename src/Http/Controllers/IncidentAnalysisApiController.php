@@ -238,12 +238,12 @@ class IncidentAnalysisApiController extends Controller
      * GET /api/insights/reliability/incidents/{incidentId}/details
      *
      * Retorna dados detalhados de um incidente específico
-     * Lê da pasta configurada em insights.incident_correlation.storage_path/incidents/{incidentId}/
+     * Lê da pasta configurada em insights.incident_correlation.storage_path/{incidentId}/
      */
     public function incidentDetails(string $incidentId): JsonResponse
     {
         $storage_path = config('insights.incident_correlation.storage_path', storage_path('app/insights'));
-        $incidents_dir = $storage_path.'/incidents/'.$incidentId;
+        $incidents_dir = $storage_path.'/'.$incidentId;
         $impact_file = $incidents_dir.'/incident_metrics.json';
 
         if (!file_exists($impact_file)) {
