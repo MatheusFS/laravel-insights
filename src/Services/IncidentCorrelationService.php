@@ -81,21 +81,13 @@ class IncidentCorrelationService
         $startTime = $timeWindow['start'];
         $endTime = $timeWindow['end'];
 
-        // IPs para buscar
-        $ipsToQuery = array_column($legitimateIps, 'ip');
-
-        if (empty($ipsToQuery)) {
-            return [
-                'total' => 0,
-                'users' => [],
-                'message' => 'No legitimate IPs to correlate',
-            ];
-        }
+        // NOTA: Não filtramos por IP porque IPs do ALB (load balancer) são diferentes
+        // dos IPs registrados em pageviews/logins (podem vir de proxy/CDN).
+        // Estratégia: buscar TODOS os usuários com atividade no período.
 
         // Buscar em user_pageviews (usa created_at e ip_address padrão)
         $pageviewsQuery = Pageview::query()
             ->whereBetween('created_at', [$startTime, $endTime])
-            ->whereIn('ip_address', $ipsToQuery)
             ->with('user:id,name,email');
 
         if ($organizationId) {
@@ -107,7 +99,6 @@ class IncidentCorrelationService
         // Buscar em user_logins (usa created_at padrão Laravel)
         $loginsQuery = Login::query()
             ->whereBetween('created_at', [$startTime, $endTime])
-            ->whereIn('ip_address', $ipsToQuery)
             ->with('user:id,name,email');
 
         if ($organizationId) {
@@ -119,7 +110,6 @@ class IncidentCorrelationService
         // Buscar em user_requests (usa created_at padrão Laravel)
         $userRequestsQuery = AuthenticatedRequest::query()
             ->whereBetween('created_at', [$startTime, $endTime])
-            ->whereIn('ip', $ipsToQuery)
             ->with('user:id,name,email');
 
         if ($organizationId) {
