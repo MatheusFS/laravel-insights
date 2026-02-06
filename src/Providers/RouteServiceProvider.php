@@ -29,7 +29,7 @@ class RouteServiceProvider extends ServiceProvider {
             ->name(config('insights.routes_name'))
             ->prefix(config('insights.routes_prefix'))
             ->namespace($this->namespace)
-            ->group(base_path('vendor/matheusfs/laravel-insights/routes/main.php'));
+            ->group(__DIR__ . '/../../routes/main.php');
     }
 
     protected function mapApiRoutes() {
@@ -38,6 +38,6 @@ class RouteServiceProvider extends ServiceProvider {
             ->name('insights.reliability.')
             ->prefix('api/insights/reliability')
             ->namespace($this->namespace)
-            ->group(base_path('vendor/matheusfs/laravel-insights/routes/api.php'));
+            ->group(__DIR__ . '/../../routes/api.php');
     }
 }
