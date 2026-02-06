@@ -292,7 +292,7 @@ class IncidentAnalysisApiController extends Controller
     public function incidentAlbLogs(string $incidentId): JsonResponse
     {
         $storage_path = config('insights.incident_correlation.storage_path', storage_path('app/insights'));
-        $alb_logs_file = $storage_path.'/incidents/'.$incidentId.'/alb_logs_analysis.json';
+        $alb_logs_file = $storage_path.'/'.$incidentId.'/alb_logs_analysis.json';
 
         if (!file_exists($alb_logs_file)) {
             return response()->json([
@@ -331,7 +331,7 @@ class IncidentAnalysisApiController extends Controller
     public function incidentAffectedUsers(string $incidentId): JsonResponse
     {
         $storage_path = config('insights.incident_correlation.storage_path', storage_path('app/insights'));
-        $affected_users_file = $storage_path.'/incidents/'.$incidentId.'/affected_users.json';
+        $affected_users_file = $storage_path.'/'.$incidentId.'/affected_users.json';
 
         if (!file_exists($affected_users_file)) {
             return response()->json([
