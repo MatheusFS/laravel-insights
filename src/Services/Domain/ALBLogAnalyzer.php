@@ -67,7 +67,9 @@ class ALBLogAnalyzer
             'input_count' => count($logs),
             'total_classified' => $total_classified,
             'API_count' => $aggregate['by_request_type']['API']['total_requests'],
+            'API_errors_5xx' => $aggregate['by_request_type']['API']['errors_5xx'],
             'UI_count' => $aggregate['by_request_type']['UI']['total_requests'],
+            'UI_errors_5xx' => $aggregate['by_request_type']['UI']['errors_5xx'],
             'BOT_count' => $aggregate['by_request_type']['BOT']['total_requests'],
             'ASSETS_count' => $aggregate['by_request_type']['ASSETS']['total_requests'],
             'sample_log' => isset($logs[0]) && is_array($logs[0]) ? [
@@ -98,7 +100,8 @@ class ALBLogAnalyzer
         $aggregate['by_request_type'][$service_type]['total_requests']++;
 
         // Contar erro 5xx
-        $status_code = (int)($log['status_code'] ?? 200);
+        // Use target_status_code (resposta do servidor) não elb_status_code
+        $status_code = (int)($log['target_status_code'] ?? 200);
         if ($status_code >= 500 && $status_code < 600) {
             $aggregate['by_request_type'][$service_type]['errors_5xx']++;
         }
