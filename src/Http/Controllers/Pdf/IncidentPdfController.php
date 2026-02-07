@@ -23,8 +23,10 @@ class IncidentPdfController extends Controller
      * Generate PDF for a specific incident
      *
      * @param  string  $incidentId  Incident ID (e.g., "INC-2026-001")
+     * @return Response
+     * @throws \Symfony\Component\HttpKernel\Exception\HttpException
      */
-    public function download(string $incidentId): Response
+    public function download(string $incidentId)
     {
         $incident = $this->findIncident($incidentId);
 
@@ -51,8 +53,10 @@ class IncidentPdfController extends Controller
      * Preview PDF in browser
      *
      * @param  string  $incidentId  Incident ID
+     * @return Response
+     * @throws \Symfony\Component\HttpKernel\Exception\HttpException
      */
-    public function preview(string $incidentId): Response
+    public function preview(string $incidentId)
     {
         $incident = $this->findIncident($incidentId);
 

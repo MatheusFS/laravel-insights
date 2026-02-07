@@ -52,7 +52,7 @@ class DownloadALBLogsCommand extends Command
 
         if ($partition < 1 || $partition > $totalPartitions) {
             $this->error("--partition deve estar entre 1 e --partitions (--partition={$partition}, --partitions={$totalPartitions})");
-            return Command::FAILURE;
+            return self::FAILURE;
         }
 
         if ($totalPartitions > 1) {
@@ -72,7 +72,7 @@ class DownloadALBLogsCommand extends Command
             return $this->downloadDate();
         } catch (\Exception $e) {
             $this->error("Erro ao baixar logs: {$e->getMessage()}");
-            return Command::FAILURE;
+            return self::FAILURE;
         }
     }
 
@@ -126,7 +126,7 @@ class DownloadALBLogsCommand extends Command
         $this->line("     - BOT: {$metrics->bot->total_requests}");
         $this->line("     - ASSETS: {$metrics->assets->total_requests}");
 
-        return Command::SUCCESS;
+        return self::SUCCESS;
     }
 
     /**
@@ -139,7 +139,7 @@ class DownloadALBLogsCommand extends Command
         // Validar formato
         if (!preg_match('/^\d{4}-\d{2}$/', $month)) {
             $this->error("Formato de mês inválido. Use: YYYY-MM (ex: 2026-02)");
-            return Command::FAILURE;
+            return self::FAILURE;
         }
 
         $this->info("Baixando logs ALB para o mês de {$month}...");
@@ -163,7 +163,7 @@ class DownloadALBLogsCommand extends Command
         $this->line("     - BOT: {$metrics->bot->total_requests}");
         $this->line("     - ASSETS: {$metrics->assets->total_requests}");
 
-        return Command::SUCCESS;
+        return self::SUCCESS;
     }
 
     /**
@@ -180,7 +180,7 @@ class DownloadALBLogsCommand extends Command
 
         if (!$startStr || !$endStr) {
             $this->error("--start e --end são obrigatórios. Ex: --start=2026-02-01T00:00:00Z --end=2026-02-05T23:59:59Z");
-            return Command::FAILURE;
+            return self::FAILURE;
         }
 
         try {
@@ -189,11 +189,11 @@ class DownloadALBLogsCommand extends Command
 
             if ($start->gt($end)) {
                 $this->error("--start não pode ser maior que --end");
-                return Command::FAILURE;
+                return self::FAILURE;
             }
         } catch (\Exception $e) {
             $this->error("Erro ao fazer parse das datas: {$e->getMessage()}");
-            return Command::FAILURE;
+            return self::FAILURE;
         }
 
         $this->info("Baixando logs ALB para período customizado...");
@@ -203,20 +203,15 @@ class DownloadALBLogsCommand extends Command
         // Usar novo método downloadLogsForPeriod do downloader
         if (!method_exists($this->downloader, 'downloadLogsForPeriod')) {
             $this->error("ALBLogDownloader não suporta downloadLogsForPeriod. Atualize o pacote.");
-            return Command::FAILURE;
+            return self::FAILURE;
         }
 
-        $options = [
-            'force' => $this->option('force') ?? false,
-            'partition' => (int) $this->option('partition'),
-            'totalPartitions' => (int) $this->option('partitions'),
-            'filterCallback' => fn($filename) => $this->shouldProcessFile($filename),
-        ];
+        $force = (bool) ($this->option('force') ?? false);
 
         $result = $this->downloader->downloadLogsForPeriod(
             $start,
             $end,
-            $options
+            $force
         );
 
         $this->info("✅ Logs baixados com sucesso!");
@@ -227,6 +222,6 @@ class DownloadALBLogsCommand extends Command
         $this->line("");
         $this->comment("💡 Dica: Os logs foram salvos no diretório unificado. Você pode usar esse período em análises de incidente.");
 
-        return Command::SUCCESS;
+        return self::SUCCESS;
     }
 }
