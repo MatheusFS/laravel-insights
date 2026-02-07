@@ -424,6 +424,31 @@ class S3LogDownloaderService
         $searchStartDate = $startDate->clone();
         $searchEndDate = $endDate->clone();
 
+        // ===== EARLY CACHE CHECK =====
+        // Se NÃO tem local files e NÃO tem force, PULAR tudo
+        $hasLocalFiles = $this->hasLocalLogFiles($logsPath);
+        
+        if ($hasLocalFiles && !$forceExtraction) {
+            \Log::info("Local log files already exist - skipping S3 download for period", [
+                'period' => "{$searchStartDate->toDateString()} to {$searchEndDate->toDateString()}",
+                'local_path' => $logsPath,
+                'available_files' => $this->countLocalLogFiles($logsPath),
+            ]);
+
+            return [
+                'local_path' => $logsPath,
+                'downloaded_count' => 0,
+                'extracted_count' => 0,
+                'skipped' => true,
+                'reason' => 'Local files already exist. Use force to re-download.',
+                'available_files' => $this->countLocalLogFiles($logsPath),
+                'period' => [
+                    'started_at' => $startDate->toIso8601String(),
+                    'ended_at' => $endDate->toIso8601String(),
+                ],
+            ];
+        }
+
         // Gerar lista de prefixos S3 para o período
         $s3Prefixes = $this->generateS3Prefixes($searchStartDate, $searchEndDate);
 
@@ -433,6 +458,7 @@ class S3LogDownloaderService
         \Log::info("Starting S3 download for period", [
             'period' => "{$searchStartDate->toDateString()} to {$searchEndDate->toDateString()}",
             'prefixes_to_download' => $totalPrefixes,
+            'force_extraction' => $forceExtraction,
         ]);
 
         // Baixar logs de cada prefix COM FILTRAGEM POR TIMESTAMP
@@ -441,11 +467,13 @@ class S3LogDownloaderService
             \Log::info("Downloading from S3 prefix [{$currentIndex}/{$totalPrefixes}]: {$prefix}");
             
             // Passar timestamps para filtrar no nome do arquivo
+            // IMPORTANT: Pass $forceExtraction to skip cache if needed
             $logsInPrefix = $this->downloadLogsFromPrefix(
                 $prefix, 
                 $logsPath,
                 $searchStartDate, // Filtro: >= este timestamp
-                $searchEndDate    // Filtro: <= este timestamp
+                $searchEndDate,    // Filtro: <= este timestamp
+                $forceExtraction   // Pass force flag to downloadLogsFromPrefix
             );
             $downloadedCount += $logsInPrefix;
             
