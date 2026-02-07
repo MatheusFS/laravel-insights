@@ -43,20 +43,26 @@ class EmojiPath
      */
     public static function get(string $codepoint): string
     {
-        // Try public folder first
-        $publicPath = public_path(self::$baseDir . '/' . self::$source . '/' . $codepoint . '.png');
-        if (file_exists($publicPath)) {
-            return $publicPath;
-        }
-
-        // Try resources folder
-        $resourcePath = resource_path(self::$baseDir . '/' . self::$source . '/' . $codepoint . '.png');
+        // Get package root directory
+        // __DIR__ = .../src/Helpers
+        // dirname(__DIR__) = .../src
+        // dirname(dirname(__DIR__)) = ... (package root)
+        $packageRoot = dirname(dirname(__DIR__));
+        
+        // Try resources folder in package (most likely location)
+        $resourcePath = $packageRoot . '/resources/' . self::$baseDir . '/' . self::$source . '/' . $codepoint . '.png';
         if (file_exists($resourcePath)) {
             return $resourcePath;
         }
 
-        // Fallback: return the expected path (may not exist)
-        return public_path(self::$baseDir . '/' . self::$source . '/' . $codepoint . '.png');
+        // Try public folder in package
+        $publicPath = $packageRoot . '/public/' . self::$baseDir . '/' . self::$source . '/' . $codepoint . '.png';
+        if (file_exists($publicPath)) {
+            return $publicPath;
+        }
+
+        // Fallback: return the expected path in resources (where we store emojis)
+        return $resourcePath;
     }
 
     /**
@@ -170,11 +176,14 @@ class EmojiPath
 
         $icons = [];
         foreach ($codepoints as $codepoint) {
-            $path = self::get($codepoint);
-            // Retorna file:// URI compatível com DOMPDF
-            $icons[$codepoint] = self::exists($codepoint) 
-                ? 'file://' . $path 
-                : '';
+            if (self::exists($codepoint)) {
+                $path = self::get($codepoint);
+                // Retorna file:// URI compatível com DOMPDF
+                $icons[$codepoint] = 'file://' . $path;
+            } else {
+                // Retorna string vazia se arquivo não existir
+                $icons[$codepoint] = '';
+            }
         }
 
         return $icons;
