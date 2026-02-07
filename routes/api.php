@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use MatheusFS\Laravel\Insights\Http\Controllers\IncidentAnalysisApiController;
+use MatheusFS\Laravel\Insights\Http\Controllers\Pdf\IncidentPdfController;
 
 /*
 |--------------------------------------------------------------------------
@@ -45,6 +46,12 @@ Route::prefix('incidents/{incidentId}')
         // POST /api/insights/reliability/incidents/{incidentId}/apply-waf-rules
         Route::post('apply-waf-rules', [IncidentAnalysisApiController::class, 'applyWafRules'])
             ->name('apply-waf-rules');
+
+        // PDF endpoints
+        Route::get('pdf/download', [IncidentPdfController::class, 'download'])
+            ->name('pdf.download');
+        Route::get('pdf/preview', [IncidentPdfController::class, 'preview'])
+            ->name('pdf.preview');
     });
 
 // GET /api/insights/reliability/sre-metrics

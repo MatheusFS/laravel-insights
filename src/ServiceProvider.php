@@ -12,6 +12,8 @@ use MatheusFS\Laravel\Insights\Services\Domain\Traffic\TrafficAnalyzerService;
 use MatheusFS\Laravel\Insights\Services\Domain\Incident\IncidentMetricsCalculator;
 use MatheusFS\Laravel\Insights\Services\Domain\Security\WAFRuleGeneratorService;
 use MatheusFS\Laravel\Insights\Services\Infrastructure\FileStorageService;
+use MatheusFS\Laravel\Insights\Services\Pdf\IncidentPdfGeneratorV2;
+use MatheusFS\Laravel\Insights\Services\Pdf\PdfGenerator;
 use MatheusFS\Laravel\Insights\Contracts\ALBLogDownloaderInterface;
 use MatheusFS\Laravel\Insights\Services\Domain\ALBLogDownloader;
 use MatheusFS\Laravel\Insights\Services\Domain\S3ALBLogDownloader;
@@ -39,6 +41,10 @@ class ServiceProvider extends BaseServiceProvider {
 
         // Register infrastructure services
         $this->app->singleton(FileStorageService::class);
+
+        // Register PDF services
+        $this->app->singleton(PdfGenerator::class);
+        $this->app->singleton(IncidentPdfGeneratorV2::class);
 
         // Register ALB Log services
         $this->app->singleton(ALBLogAnalyzer::class);

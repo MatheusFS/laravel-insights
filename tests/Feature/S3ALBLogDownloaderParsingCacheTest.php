@@ -32,6 +32,14 @@ class S3ALBLogDownloaderParsingCacheTest extends TestCase
 
         $this->log_parser = app(LogParserService::class);
         $this->analyzer = app(ALBLogAnalyzer::class);
+        
+        // Initialize downloader with correct parameter order
+        $s3Service = $this->createMock(S3LogDownloaderService::class);
+        $this->downloader = new S3ALBLogDownloader(
+            $this->analyzer,
+            $s3Service,
+            $this->log_parser
+        );
     }
 
     protected function tearDown(): void
@@ -98,20 +106,30 @@ class S3ALBLogDownloaderParsingCacheTest extends TestCase
     {
         // Arrange
         $log_file = $this->test_logs_dir . '/modified.log';
+        
+        // Criar arquivo "antigo" (10 segundos atrás)
+        $old_time = time() - 10;
         File::put($log_file, "original content\n");
+        touch($log_file, $old_time);
         
-        // Criar marker "antigo" (5 minutos atrás)
+        // Criar marker logo após (5 segundos atrás)
         $old_marker = $log_file . '.parsed';
+        $marker_time = time() - 5;
         File::put($old_marker, json_encode(['parsed_at' => now()->subMinutes(5)]));
+        touch($old_marker, $marker_time);
         
-        // Simular modificação do arquivo (tocar arquivo)
+        // Simular modificação do arquivo AGORA (mais recente que marker)
+        File::put($log_file, "modified content\n");
         touch($log_file, time());
+        
+        // Esperar 1 segundo para garantir diferença temporal
+        sleep(1);
         
         // Act
         $unparsed = $this->downloader->testGetUnparsedLogFiles([$log_file], false);
         
         // Assert
-        $this->assertCount(1, $unparsed);
+        $this->assertCount(1, $unparsed, "Arquivo modificado após marker deveria ser reprocessado");
         $this->assertEquals([$log_file], $unparsed);
     }
 
