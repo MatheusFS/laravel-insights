@@ -93,6 +93,19 @@ class LogoPath
     }
 
     /**
+     * Get URI optimized for PDF generation (base64 data URI)
+     * 
+     * DOMPDF has issues with file:// protocol across symlinks,
+     * so we return base64 data URI by default for PDFs.
+     * 
+     * @return string data:image/png;base64,...
+     */
+    public static function getPdfUri(): string
+    {
+        return self::getBase64();
+    }
+
+    /**
      * Get logo dimensions
      * 
      * @return array|null ['width' => int, 'height' => int] or null if not found

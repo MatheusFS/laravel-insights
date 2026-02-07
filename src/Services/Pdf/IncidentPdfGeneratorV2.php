@@ -144,7 +144,7 @@ class IncidentPdfGeneratorV2
             ],
             'generated_at' => now()->setTimezone('America/Sao_Paulo')->format('d/m/Y H:i:s'),
             'company' => 'Continuo Tecnologia',
-            'icons' => EmojiPath::getIconArray(),
+            'icons' => EmojiPath::getPdfIconArray(),  // Use base64 data URIs for PDF compatibility
         ];
     }
 

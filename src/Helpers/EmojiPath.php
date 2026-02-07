@@ -191,8 +191,38 @@ class EmojiPath
         return $icons;
     }
 
+    /**     * Get URI optimized for PDF generation (base64 data URI)
+     * 
+     * DOMPDF has issues with file:// protocol across symlinks,
+     * so we return base64 data URI by default for PDFs.
+     * 
+     * @param string $codepoint Emoji unicode codepoint
+     * @return string data:image/png;base64,...
+     */
+    public static function getPdfUri(string $codepoint): string
+    {
+        return self::getBase64($codepoint);
+    }
+
     /**
-     * Set base directory for emoji storage
+     * Get PDF icon array with base64 data URIs
+     * 
+     * Returns 5 common icons used in incident PDFs.
+     * 
+     * @return array ['codepoint' => 'data:image/png;base64,...', ...]
+     */
+    public static function getPdfIconArray(): array
+    {
+        return [
+            '2139' => self::getPdfUri('2139'),  // ℹ️ Info
+            '26a0' => self::getPdfUri('26a0'),  // ⚠️ Warning
+            '1f534' => self::getPdfUri('1f534'), // 🔴 Red circle
+            '1f535' => self::getPdfUri('1f535'), // 🔵 Blue circle
+            '2705' => self::getPdfUri('2705'),  // ✅ Check mark
+        ];
+    }
+
+    /**     * Set base directory for emoji storage
      * 
      * @param string $dir Directory name (e.g., 'emojis', 'icons')
      */
