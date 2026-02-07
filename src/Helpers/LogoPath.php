@@ -27,11 +27,13 @@ class LogoPath
     /**
      * Get path with file:// protocol (ideal for DOMPDF)
      * 
-     * @return string file:// URI to logo
+     * @return string file:// URI to logo (absolute path with 3 slashes: file:///path)
      */
     public static function getUri(): string
     {
-        return 'file://' . self::getPath();
+        $path = self::getPath();
+        // Ensure absolute path and use 3 slashes for file:// (file:///path/to/file)
+        return 'file://' . (strpos($path, '/') === 0 ? '' : '/') . $path;
     }
 
     /**
@@ -42,19 +44,23 @@ class LogoPath
     public static function getPath(): string
     {
         // Try package assets first
-        $packagePath = __DIR__ . '/../../assets/icone_regular.png';
-        if (file_exists($packagePath)) {
-            return realpath($packagePath);
+        $packagePath = realpath(__DIR__ . '/../../resources/assets/icone_regular.png');
+        if ($packagePath && file_exists($packagePath)) {
+            return $packagePath;
         }
 
         // Fallback: try public folder (if used in consuming app)
-        $publicPath = public_path('images/logo.png');
-        if (file_exists($publicPath)) {
-            return $publicPath;
+        try {
+            $publicPath = public_path('images/logo.png');
+            if (file_exists($publicPath)) {
+                return realpath($publicPath) ?: $publicPath;
+            }
+        } catch (\Exception $e) {
+            // public_path() may not be available in all contexts
         }
 
-        // Last resort: generic placeholder path
-        return realpath(__DIR__ . '/../../assets/icone_regular.png') ?? '';
+        // Last resort: return the original path (may not exist)
+        return __DIR__ . '/../../resources/assets/icone_regular.png';
     }
 
     /**

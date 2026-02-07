@@ -69,11 +69,13 @@ class EmojiPath
      * Get emoji as file:// URI (for DOMPDF)
      * 
      * @param string $codepoint Emoji unicode
-     * @return string file:// URI
+     * @return string file:// URI (absolute path with 3 slashes: file:///path)
      */
     public static function getUri(string $codepoint): string
     {
-        return 'file://' . self::get($codepoint);
+        $path = self::get($codepoint);
+        // Ensure absolute path and use 3 slashes for file:// (file:///path/to/file)
+        return 'file://' . (strpos($path, '/') === 0 ? '' : '/') . $path;
     }
 
     /**
