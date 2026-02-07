@@ -86,8 +86,7 @@ class S3LogDownloaderServiceTest extends TestCase
                 ['id' => 'INC-OTHER', 'started_at' => '2026-01-01T00:00:00Z', 'restored_at' => '2026-01-01T01:00:00Z']
             ]
         ];
-        $parentPath = dirname($this->tempIncidentsPath);
-        $incidentsFile = $parentPath . '/incidents.json';
+        $incidentsFile = $this->tempIncidentsPath . '/incidents.json';
         file_put_contents($incidentsFile, json_encode($incidentsData));
 
         $this->expectException(\Exception::class);
@@ -106,8 +105,7 @@ class S3LogDownloaderServiceTest extends TestCase
     public function test_throws_exception_when_incident_json_is_invalid(): void
     {
         // Arrange - criar arquivo consolidado inválido
-        $parentPath = dirname($this->tempIncidentsPath);
-        $incidentsFile = $parentPath . '/incidents.json';
+        $incidentsFile = $this->tempIncidentsPath . '/incidents.json';
         file_put_contents($incidentsFile, 'invalid json {{{');
 
         $this->expectException(\Exception::class);
@@ -131,8 +129,7 @@ class S3LogDownloaderServiceTest extends TestCase
                 ['id' => 'INC-MISSING-START', 'restored_at' => '2026-02-03T12:50:00Z']
             ]
         ];
-        $parentPath = dirname($this->tempIncidentsPath);
-        $incidentsFile = $parentPath . '/incidents.json';
+        $incidentsFile = $this->tempIncidentsPath . '/incidents.json';
         file_put_contents($incidentsFile, json_encode($incidentsData));
 
         $this->expectException(\Exception::class);
@@ -156,8 +153,7 @@ class S3LogDownloaderServiceTest extends TestCase
                 ['id' => 'INC-MISSING-RESTORE', 'started_at' => '2026-02-02T22:25:00Z']
             ]
         ];
-        $parentPath = dirname($this->tempIncidentsPath);
-        $incidentsFile = $parentPath . '/incidents.json';
+        $incidentsFile = $this->tempIncidentsPath . '/incidents.json';
         file_put_contents($incidentsFile, json_encode($incidentsData));
 
         $this->expectException(\Exception::class);
