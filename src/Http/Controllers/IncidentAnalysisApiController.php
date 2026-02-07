@@ -242,13 +242,12 @@ class IncidentAnalysisApiController extends Controller
      * GET /api/insights/reliability/incidents/{incidentId}/details
      *
      * Retorna dados detalhados de um incidente específico
-     * Lê da pasta configurada em insights.incident_correlation.storage_path/{incidentId}/
+     * Lê da pasta configurada em insights.incidents_path
      */
     public function incidentDetails(string $incidentId): JsonResponse
     {
-        $storage_path = config('insights.incident_correlation.storage_path', storage_path('app/insights'));
-        $incidents_dir = $storage_path.'/'.$incidentId;
-        $impact_file = $incidents_dir.'/incident_metrics.json';
+        $incidents_path = config('insights.incidents_path', storage_path('insights/reliability/incidents'));
+        $impact_file = $incidents_path.'/'.$incidentId.'/incident_metrics.json';
 
         if (!file_exists($impact_file)) {
             return response()->json([
@@ -262,11 +261,11 @@ class IncidentAnalysisApiController extends Controller
             $impact_data = json_decode(file_get_contents($impact_file), true);
 
             // Ler também as timeseries para gráficos
-            $traffic_file = $incidents_dir.'/traffic.json';
-            $errors_5xx_file = $incidents_dir.'/errors_5xx.json';
-            $errors_4xx_file = $incidents_dir.'/errors_4xx.json';
-            $alb_logs_file = $incidents_dir.'/alb_logs_analysis.json';
-            $affected_users_file = $incidents_dir.'/affected_users.json';
+            $traffic_file = $incidents_path.'/'.$incidentId.'/traffic.json';
+            $errors_5xx_file = $incidents_path.'/'.$incidentId.'/errors_5xx.json';
+            $errors_4xx_file = $incidents_path.'/'.$incidentId.'/errors_4xx.json';
+            $alb_logs_file = $incidents_path.'/'.$incidentId.'/alb_logs_analysis.json';
+            $affected_users_file = $incidents_path.'/'.$incidentId.'/affected_users.json';
 
             $response = [
                 'impact' => $impact_data,
@@ -295,8 +294,8 @@ class IncidentAnalysisApiController extends Controller
      */
     public function incidentAlbLogs(string $incidentId): JsonResponse
     {
-        $storage_path = config('insights.incident_correlation.storage_path', storage_path('app/insights'));
-        $alb_logs_file = $storage_path.'/'.$incidentId.'/alb_logs_analysis.json';
+        $incidents_path = config('insights.incidents_path', storage_path('insights/reliability/incidents'));
+        $alb_logs_file = $incidents_path.'/'.$incidentId.'/alb_logs_analysis.json';
 
         if (!file_exists($alb_logs_file)) {
             return response()->json([
@@ -334,8 +333,8 @@ class IncidentAnalysisApiController extends Controller
      */
     public function incidentAffectedUsers(string $incidentId): JsonResponse
     {
-        $storage_path = config('insights.incident_correlation.storage_path', storage_path('app/insights'));
-        $affected_users_file = $storage_path.'/'.$incidentId.'/affected_users.json';
+        $incidents_path = config('insights.incidents_path', storage_path('insights/reliability/incidents'));
+        $affected_users_file = $incidents_path.'/'.$incidentId.'/affected_users.json';
 
         if (!file_exists($affected_users_file)) {
             return response()->json([
@@ -431,6 +430,59 @@ class IncidentAnalysisApiController extends Controller
     public function sreMonthlyMetrics(): JsonResponse
     {
         return $this->calculateSREMetrics();
+    }
+
+    /**
+     * GET /api/insights/reliability/incidents
+     *
+     * Lista todos os incidentes do arquivo consolidado
+     */
+    public function listIncidents(): JsonResponse
+    {
+        try {
+            $incidentsPath = config('insights.incidents_path', storage_path('insights/reliability/incidents'));
+            $parentPath = dirname($incidentsPath);
+            $incidentsFile = $parentPath . '/incidents.json';
+
+            if (!\File::exists($incidentsFile)) {
+                return response()->json([
+                    'error' => 'Arquivo não encontrado',
+                    'file' => 'incidents.json',
+                    'path' => $incidentsFile,
+                    'hint' => 'Arquivo de incidentes não encontrado. Verifique o caminho.',
+                ], 404);
+            }
+
+            $incidentsJson = \File::get($incidentsFile);
+            $allIncidents = json_decode($incidentsJson, true);
+
+            if (!$allIncidents) {
+                return response()->json([
+                    'error' => 'JSON inválido',
+                    'file' => 'incidents.json',
+                    'path' => $incidentsFile,
+                ], 500);
+            }
+
+            // Normalizar estrutura (adicionar campos calculados se necessário)
+            $incidents = $allIncidents['incidents'] ?? [];
+            
+            return response()->json([
+                'metadata' => $allIncidents['metadata'] ?? [],
+                'incidents' => $incidents,
+                'total' => count($incidents),
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('List Incidents Error: ' . $e->getMessage(), [
+                'exception' => $e,
+            ]);
+
+            return response()->json([
+                'error' => 'Erro ao listar incidentes',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 
 }

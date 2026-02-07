@@ -13,6 +13,11 @@ use MatheusFS\Laravel\Insights\Http\Controllers\IncidentAnalysisApiController;
 |
 */
 
+// GET /api/insights/reliability/incidents
+// Lista todos os incidentes do arquivo consolidado
+Route::get('incidents', [IncidentAnalysisApiController::class, 'listIncidents'])
+    ->name('incidents.list');
+
 Route::prefix('incidents/{incidentId}')
     ->name('incidents.')
     ->group(function () {
