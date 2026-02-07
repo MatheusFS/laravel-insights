@@ -98,7 +98,13 @@ class IncidentPdfGeneratorV2
         ];
 
         // Get severity color class
-        $severityColor = $this->getSeverityColor($classification['severity_level'] ?? 'S3');
+        $calculator = new \MatheusFS\Laravel\Insights\Services\Domain\Incident\IncidentSeverityCalculator();
+        $calculated = $calculator->calculate(
+            $classification['error_type'] ?? 'other',
+            $classification['metric_value'] ?? 0,
+            $classification['metric_unit'] ?? '%'
+        );
+        $severityColor = $this->getSeverityColor($calculated['severity_level']);
         $slaBreached = $impact['sla_breached'] ?? false;
 
         return [
@@ -106,7 +112,6 @@ class IncidentPdfGeneratorV2
                 'id' => $this->ensureString($incident['id'] ?? 'unknown'),
                 'status' => $this->ensureString($incident['status'] ?? 'unknown'),
                 'status_label' => $this->getStatusLabel($this->ensureString($incident['status'] ?? 'unknown')),
-                'environment' => strtoupper($this->ensureString($incident['environment'] ?? 'unknown')),
                 'is_open' => in_array($this->ensureString($incident['status'] ?? 'resolved'), ['open', 'investigating', 'detected']),
                 'oncall' => $this->ensureString($incident['oncall'] ?? 'Não registrado'),
                 'artifacts_dir' => $this->ensureString($incident['artifacts_dir'] ?? ''),
@@ -115,8 +120,8 @@ class IncidentPdfGeneratorV2
             'timestamp' => $timelineFormatted,
             'classification' => [
                 'error_type' => $this->formatErrorType($this->ensureString($classification['error_type'] ?? 'unknown')),
-                'severity' => $this->ensureString($classification['severity'] ?? 'Normal'),
-                'severity_level' => $this->ensureString($classification['severity_level'] ?? 'S3'),
+                'severity' => $calculated['severity'],
+                'severity_level' => $calculated['severity_level'],
                 'severity_color' => $severityColor,
                 'metric_value' => $classification['metric_value'] ?? 0,
                 'metric_unit' => $this->ensureString($classification['metric_unit'] ?? '%'),

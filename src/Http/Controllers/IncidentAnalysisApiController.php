@@ -446,8 +446,50 @@ class IncidentAnalysisApiController extends Controller
                 ], 500);
             }
 
-            // Normalizar estrutura (adicionar campos calculados se necessário)
+            // Normalizar estrutura e calcular severity/severity_level dinamicamente
             $incidents = $allIncidents['incidents'] ?? [];
+            $severityCalculator = new \MatheusFS\Laravel\Insights\Services\Domain\Incident\IncidentSeverityCalculator();
+            $metricsCalculator = new \MatheusFS\Laravel\Insights\Services\Domain\Incident\IncidentMetricsCalculator();
+            
+            // Adicionar campos calculados a cada incidente
+            $incidents = array_map(function ($incident) use ($severityCalculator, $metricsCalculator, $incidentsPath) {
+                $classification = $incident['classification'] ?? [];
+                $incidentId = $incident['metadata']['incident_id'] ?? null;
+                
+                // 1. Tentar carregar ALB analysis para calcular métrica real
+                $metricValue = 0;
+                $metricUnit = '%';
+                $errorType = $classification['error_type'] ?? 'other';
+                
+                if ($incidentId) {
+                    $albAnalysisPath = "{$incidentsPath}/{$incidentId}/alb_logs_analysis.json";
+                    
+                    if (\File::exists($albAnalysisPath)) {
+                        $albAnalysisJson = \File::get($albAnalysisPath);
+                        $albAnalysis = json_decode($albAnalysisJson, true);
+                        
+                        if ($albAnalysis && isset($albAnalysis['metrics'])) {
+                            // Usar determineErrorType para obter error_type, metric_value e metric_unit
+                            $errorData = $metricsCalculator->determineErrorType($albAnalysis['metrics']);
+                            $errorType = $errorData['error_type'];
+                            $metricValue = $errorData['metric_value'];
+                            $metricUnit = $errorData['metric_unit'];
+                        }
+                    }
+                }
+                
+                // 2. Calcular severity e severity_level baseado em dados reais
+                $calculated = $severityCalculator->calculate($errorType, $metricValue, $metricUnit);
+                
+                // 3. Adicionar campos calculados à classification
+                $incident['classification']['error_type'] = $errorType;
+                $incident['classification']['metric_value'] = $metricValue;
+                $incident['classification']['metric_unit'] = $metricUnit;
+                $incident['classification']['severity'] = $calculated['severity'];
+                $incident['classification']['severity_level'] = $calculated['severity_level'];
+                
+                return $incident;
+            }, $incidents);
             
             return response()->json([
                 'metadata' => $allIncidents['metadata'] ?? [],

@@ -227,12 +227,7 @@ class SREMetricsCalculator
         $month_start = Carbon::now()->startOfMonth();
 
         foreach ($logs as $log) {
-            // Filtrar apenas produção e mês atual
-            $environment = $log['environment'] ?? 'production';
-            if ($environment !== 'production') {
-                continue;
-            }
-
+            // Filtrar apenas mês atual
             $timestamp = isset($log['timestamp']) ? Carbon::parse($log['timestamp']) : null;
             if (! $timestamp || $timestamp->lt($month_start)) {
                 continue;

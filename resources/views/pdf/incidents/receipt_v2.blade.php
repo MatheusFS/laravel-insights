@@ -1,6 +1,6 @@
 @extends('insights::pdf.layout_incident')
 
-@section('title', 'Comprovante de Incidente - ' . $incident['id'])
+@section('title', 'Recibo de Incidente - ' . $incident['id'])
 
 @section('content')
     {{-- ============================================================================
@@ -48,41 +48,16 @@
                     @endif
                 </td>
                 <td style="padding-left: 15px; vertical-align: middle;">
-                    <h1 style="margin: 0; font-size: 24px; font-weight: bold; color: #1976d2;">Comprovante de Incidente</h1>
-                    <p style="margin: 3px 0; font-size: 10px; color: #999;">{{ $generated_at ?? 'Data não disponível' }}</p>
+                    <h1 style="margin: 0; font-size: 24px; font-weight: bold; color: #1976d2;">Recibo de Incidente</h1>
+                    <span style="margin: 3px 0; font-size: 10px; color: #999;">{{ $generated_at ?? 'Data não disponível' }}</span>
+                    <span style="background: {{ $incident['is_open'] ? '#ff9800' : '#4caf50' }}; color: white; padding: 2px 6px; border-radius: 3px;">{{ $incident['status_label'] }}</span>
                 </td>
                 <td style="text-align: right; vertical-align: middle;">
                     <div style="background: {{ $incident['severity_color'] ?? '#f57c00' }}; color: white; padding: 10px 15px; border-radius: 4px; display: inline-block;">
-                        <p style="margin: 0; font-size: 12px; font-weight: bold;">{{ $incident['environment'] ?? 'PROD' }}</p>
-                        <p style="margin: 3px 0; font-size: 10px;">ID: {{ $incident['id'] }}</p>
+                        <p style="margin: 0; font-size: 12px; font-weight: bold;">{{ $incident['id'] }}</p>
+                        <p style="margin: 3px 0; font-size: 10px;">{{ $incident['oncall'] }}</p>
                     </div>
                 </td>
-            </tr>
-        </table>
-    </div>
-
-    {{-- ============================================================================
-         SECTION 1: IDENTIFICAÇÃO
-         ============================================================================ --}}
-    <div class="section" style="margin-bottom: 20px; padding: 12px; background: #f9f9f9; border-left: 4px solid #1976d2;">
-        <h2 style="margin: 0 0 10px 0; font-size: 13px; font-weight: bold; color: #1976d2;">
-            @if(!empty($icons['2139']))
-                <img src="{{ $icons['2139'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Info" />
-            @endif
-            IDENTIFICAÇÃO
-        </h2>
-        <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
-            <tr>
-                <td style="padding: 6px; width: 25%;"><strong>ID do Incidente:</strong></td>
-                <td style="padding: 6px; width: 25%;">{{ $incident['id'] }}</td>
-                <td style="padding: 6px; width: 25%;"><strong>Status:</strong></td>
-                <td style="padding: 6px; width: 25%;"><span style="background: {{ $incident['is_open'] ? '#ff9800' : '#4caf50' }}; color: white; padding: 2px 6px; border-radius: 3px;">{{ $incident['status_label'] }}</span></td>
-            </tr>
-            <tr>
-                <td style="padding: 6px;"><strong>Ambiente:</strong></td>
-                <td style="padding: 6px;">{{ $incident['environment'] }}</td>
-                <td style="padding: 6px;"><strong>On-call:</strong></td>
-                <td style="padding: 6px;">{{ $incident['oncall'] }}</td>
             </tr>
         </table>
     </div>

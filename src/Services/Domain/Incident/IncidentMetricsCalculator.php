@@ -138,6 +138,51 @@ class IncidentMetricsCalculator
     }
 
     /**
+     * Determina o error_type dominante e retorna metric_value + metric_unit
+     * 
+     * @param array $metrics Métricas calculadas (output de calculateMetrics)
+     * @return array ['error_type' => string, 'metric_value' => float, 'metric_unit' => string]
+     */
+    public function determineErrorType(array $metrics): array
+    {
+        $errors5xxPercentage = $metrics['errors_5xx']['percentage'] ?? 0;
+        $errors4xxPercentage = $metrics['errors_4xx']['percentage'] ?? 0;
+        $latencyP99 = $metrics['latency_p99_ms'] ?? 0;
+        
+        // Prioridade: 5xx > 4xx > latency
+        if ($errors5xxPercentage > 0) {
+            return [
+                'error_type' => '5xx',
+                'metric_value' => $errors5xxPercentage,
+                'metric_unit' => '%',
+            ];
+        }
+        
+        if ($errors4xxPercentage > 0) {
+            return [
+                'error_type' => '4xx',
+                'metric_value' => $errors4xxPercentage,
+                'metric_unit' => '%',
+            ];
+        }
+        
+        if ($latencyP99 > 500) { // SLO de 500ms
+            return [
+                'error_type' => 'latency',
+                'metric_value' => $latencyP99,
+                'metric_unit' => 'ms',
+            ];
+        }
+        
+        // Fallback: sem problema detectado
+        return [
+            'error_type' => 'other',
+            'metric_value' => 0,
+            'metric_unit' => '%',
+        ];
+    }
+
+    /**
      * Retorna estrutura vazia de métricas
      */
     private function emptyMetrics(): array

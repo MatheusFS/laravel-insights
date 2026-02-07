@@ -149,7 +149,7 @@ class ImageHelpersTest extends TestCase
         $base64 = LogoPath::getBase64();
         
         $this->assertStringStartsWith('data:image/', $base64);
-        $this->assertStringContains(';base64,', $base64);
+        $this->assertStringContainsString(';base64,', $base64);
     }
 
     /**
