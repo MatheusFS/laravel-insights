@@ -23,6 +23,19 @@ use Illuminate\Support\Facades\File;
 class ALBLogDownloader implements ALBLogDownloaderInterface
 {
     /**
+     * Implementação LOCAL/MOCK - para desenvolvimento ou testes
+     * 
+     * Retorna dados mockados ou do armazenamento local.
+     * NÃO faz download de S3/CloudWatch.
+     * 
+     * Use este método para validar que a implementação correta está sendo usada.
+     */
+    public function getLogSource(): string
+    {
+        return 'local';
+    }
+
+    /**
      * Caminho base para armazenamento de JSON calculados (NÃO logs brutos)
      */
     private string $storage_path;

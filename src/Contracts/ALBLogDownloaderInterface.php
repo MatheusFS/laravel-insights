@@ -15,6 +15,18 @@ use Carbon\Carbon;
 interface ALBLogDownloaderInterface
 {
     /**
+     * Retorna o tipo de fonte de logs que esta implementação usa
+     * 
+     * Valores possíveis: 's3', 'local', 'cloudwatch'
+     * 
+     * Use este método para validar em tempo de execução qual implementação está sendo usada.
+     * Evita problemas com config keys incorretas na ServiceProvider.
+     * 
+     * @return string Tipo de fonte: 's3' | 'local' | 'cloudwatch'
+     */
+    public function getLogSource(): string;
+
+    /**
      * Baixa logs ALB para um período específico
      * 
      * Estrutura retornada:

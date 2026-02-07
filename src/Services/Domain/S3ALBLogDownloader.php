@@ -22,6 +22,19 @@ use Illuminate\Support\Facades\Log;
  */
 class S3ALBLogDownloader implements ALBLogDownloaderInterface
 {
+    /**
+     * Implementação S3 - para produção
+     * 
+     * Download de logs do S3, parsing e análise.
+     * Este é o downloader padrão em produção (ALB_LOG_SOURCE=s3).
+     * 
+     * Use este método para validar que a implementação correta está sendo usada.
+     */
+    public function getLogSource(): string
+    {
+        return 's3';
+    }
+
     private string $storage_path;
     private ALBLogAnalyzer $analyzer;
     private S3LogDownloaderService $s3_service;

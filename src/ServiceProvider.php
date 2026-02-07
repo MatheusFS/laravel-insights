@@ -50,19 +50,36 @@ class ServiceProvider extends BaseServiceProvider {
             $source = config('insights.alb_logs.source', 's3');
             
             if ($source === 's3') {
-                return new S3ALBLogDownloader(
+                $downloader = new S3ALBLogDownloader(
                     $app->make(ALBLogAnalyzer::class),
                     $app->make(S3LogDownloaderService::class),
                     $app->make(LogParserService::class),
                     config('insights.storage_path')
                 );
+                
+                // VALIDATION: Ensure the correct implementation was instantiated
+                if ($downloader->getLogSource() !== 's3') {
+                    throw new \RuntimeException(
+                        'ServiceProvider initialization error: S3ALBLogDownloader should have getLogSource() = "s3", ' .
+                        'but got "' . $downloader->getLogSource() . '". Check ServiceProvider binding.'
+                    );
+                }
+                
+                return $downloader;
             }
             
             // Default: Local/Mock implementation
-            return new ALBLogDownloader(
-                $app->make(ALBLogAnalyzer::class),
-                config('insights.storage_path')
-            );
+            $downloader = new ALBLogDownloader(config('insights.storage_path'));
+            
+            // VALIDATION: Ensure the correct implementation was instantiated
+            if ($downloader->getLogSource() !== 'local') {
+                throw new \RuntimeException(
+                    'ServiceProvider initialization error: ALBLogDownloader should have getLogSource() = "local", ' .
+                    'but got "' . $downloader->getLogSource() . '". Check ServiceProvider binding.'
+                );
+            }
+            
+            return $downloader;
         });
 
         // Register application service (orchestration)
