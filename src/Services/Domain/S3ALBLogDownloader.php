@@ -226,9 +226,12 @@ class S3ALBLogDownloader implements ALBLogDownloaderInterface
         $start_utc = $date->clone()->setTimezone('UTC')->startOfDay();
         $end_utc = $date->clone()->setTimezone('UTC')->endOfDay();
         
+        $force = $options['force'] ?? false;
+        
         Log::info("Fetching S3 logs for {$date->format('Y-m-d')}", [
             'start_utc' => $start_utc->toIso8601String(),
             'end_utc' => $end_utc->toIso8601String(),
+            'force' => $force,
         ]);
 
         try {
@@ -236,7 +239,7 @@ class S3ALBLogDownloader implements ALBLogDownloaderInterface
             $result = $this->s3_service->downloadLogsForPeriod(
                 $start_utc,
                 $end_utc,
-                forceExtraction: $options['force'] ?? false
+                forceExtraction: $force
             );
 
             // Listar arquivos .log extraídos
@@ -251,12 +254,23 @@ class S3ALBLogDownloader implements ALBLogDownloaderInterface
                 'sample_files' => array_slice(array_map('basename', $log_files), 0, 3),
             ]);
 
-            // Parsear todos os logs
+            // ===== PARSING CACHE LAYER: Apenas processar arquivos NÃO processados =====
+            // Usar .parsed marker file para rastrear quais foram processados
             $parsed_logs = [];
-            foreach ($log_files as $index => $log_file) {
+            $filesToParse = $this->getUnparsedLogFiles($log_files, $force);
+            $skipped_count = count($log_files) - count($filesToParse);
+            
+            if ($skipped_count > 0) {
+                \Log::info("Parsing cache hit: skipping {$skipped_count} already processed files", [
+                    'date' => $date->format('Y-m-d'),
+                ]);
+            }
+
+            // Parsear apenas os logs NÃO processados
+            foreach ($filesToParse as $index => $log_file) {
                 $filename = basename($log_file);
                 
-                \Log::debug("Processing log file [{" . ($index + 1) . "}/" . count($log_files) . "]", [
+                \Log::debug("Processing log file [{" . ($index + 1) . "}/" . count($filesToParse) . "]", [
                     'filename' => $filename,
                     'file_path' => $log_file,
                 ]);
@@ -264,8 +278,11 @@ class S3ALBLogDownloader implements ALBLogDownloaderInterface
                 $entries = $this->log_parser->parseLogFile($log_file);
                 $parsed_logs = array_merge($parsed_logs, $entries);
                 
+                // Marcar como processado
+                $this->markFileAsParsed($log_file);
+                
                 if ($index < 3 || count($entries) > 0) {
-                    \Log::info("Parsed file [" . ($index + 1) . "/" . count($log_files) . "]", [
+                    \Log::info("Parsed file [" . ($index + 1) . "/" . count($filesToParse) . "]", [
                         'filename' => $filename,
                         'entries_count' => count($entries),
                     ]);
@@ -274,8 +291,10 @@ class S3ALBLogDownloader implements ALBLogDownloaderInterface
 
             \Log::info("Parsing complete", [
                 'date' => $date->format('Y-m-d'),
-                'total_files' => count($log_files),
-                'total_entries' => count($parsed_logs),
+                'total_files_available' => count($log_files),
+                'files_parsed_this_run' => count($filesToParse),
+                'files_skipped_cached' => $skipped_count,
+                'total_entries_parsed' => count($parsed_logs),
                 'sample_entry' => $parsed_logs[0] ?? null,
             ]);
 
@@ -287,6 +306,74 @@ class S3ALBLogDownloader implements ALBLogDownloaderInterface
             ]);
             
             return [];
+        }
+    }
+
+    /**
+     * Obtém lista de arquivos .log não processados ainda
+     * 
+     * **Parsing Cache Layer:** Se arquivo .log.parsed existe, significa que
+     * o arquivo já foi parseado e análise foi feita. Pula processamento.
+     * 
+     * Com --force: Ignora cache e reprocessa todos
+     * Sem --force: Retorna apenas novos + modifica que mudaram desde última parse
+     * 
+     * @param  array   $all_log_files  Lista de caminhos de .log
+     * @param  bool    $forceReparse   Se true, ignora cache e reprocessa tudo
+     * @return array Lista filtrada apenas arquivos a processar
+     */
+    private function getUnparsedLogFiles(array $all_log_files, bool $forceReparse = false): array
+    {
+        if ($forceReparse) {
+            // Force: reprocessar TUDO
+            return $all_log_files;
+        }
+
+        // Sem force: retornar apenas não-parseados
+        $unparsed = [];
+        foreach ($all_log_files as $log_file) {
+            $parsed_marker = $log_file . '.parsed';
+            
+            // Se marker não existe OU arquivo modificado depois do marker: processar
+            if (!File::exists($parsed_marker)) {
+                $unparsed[] = $log_file;
+                continue;
+            }
+
+            // Verificar se arquivo foi modificado DEPOIS do marker
+            $fileModTime = filemtime($log_file);
+            $markerModTime = filemtime($parsed_marker);
+            
+            if ($fileModTime > $markerModTime) {
+                $unparsed[] = $log_file;
+            }
+        }
+
+        return $unparsed;
+    }
+
+    /**
+     * Marca um arquivo como parseado criando um marker .parsed
+     * 
+     * Usado para rastrear quais arquivos já foram processados,
+     * evitando reprocessamento em próximas execuções.
+     * 
+     * @param  string  $log_file  Caminho completo do arquivo .log
+     * @return bool True se marker criado
+     */
+    private function markFileAsParsed(string $log_file): bool
+    {
+        try {
+            $parsed_marker = $log_file . '.parsed';
+            File::put($parsed_marker, json_encode([
+                'parsed_at' => now()->toIso8601String(),
+                'original_file' => $log_file,
+                'file_size' => filesize($log_file),
+            ]));
+            return true;
+        } catch (\Exception $e) {
+            \Log::warning("Failed to create parsing marker for {$log_file}: {$e->getMessage()}");
+            return false;
         }
     }
 
@@ -358,5 +445,24 @@ class S3ALBLogDownloader implements ALBLogDownloaderInterface
     private function getMonthDirectory(Carbon $date): string
     {
         return $this->storage_path . '/' . $date->format('Y-m');
+    }
+
+    // ========== PUBLIC TESTING METHODS ==========
+    // Métodos públicos para facilitar testes da cache logic
+
+    /**
+     * @testable - Método exposto para testes
+     */
+    public function testGetUnparsedLogFiles(array $all_log_files, bool $forceReparse = false): array
+    {
+        return $this->getUnparsedLogFiles($all_log_files, $forceReparse);
+    }
+
+    /**
+     * @testable - Método exposto para testes
+     */
+    public function testMarkFileAsParsed(string $log_file): bool
+    {
+        return $this->markFileAsParsed($log_file);
     }
 }
