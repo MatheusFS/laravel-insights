@@ -38,9 +38,14 @@ class S3LogDownloaderService
      * Carrega o incidente do JSON, extrai timestamps e busca logs do período.
      * Filtra arquivos por timestamp no nome (formato ALB: YYYYMMDDTHHmmZ)
      *
+     * **IMPORTANTE - Lógica de Download:**
+     * - Se NÃO existem .log ou .log.gz localmente → BAIXA (sempre)
+     * - Se existem arquivos E forceExtraction=true → FORÇA re-download
+     * - Se existem arquivos E forceExtraction=false → PULA download (cache)
+     *
      * @param  string  $incidentId  ID do incidente (ex: INC-2026-001)
      * @param  bool    $useMargins  Se deve usar margem de 1h antes/depois dos timestamps
-     * @param  bool    $forceExtraction  Se deve forçar re-extração mesmo com .log existente
+     * @param  bool    $forceExtraction  Se true, força re-download mesmo com arquivos locais
      * @return array Array com caminho local e quantidade de logs baixados
      * @throws \Exception Se incidente não for encontrado
      */
@@ -73,6 +78,40 @@ class S3LogDownloaderService
         // Gerar lista de prefixos S3 para as datas (YYYY/MM/DD/)
         $s3Prefixes = $this->generateS3Prefixes($searchStartDate, $searchEndDate);
 
+        // ===== VERIFICAÇÃO: Arquivos locais já existem? =====
+        $hasLocalFiles = $this->hasLocalLogFiles($logsPath);
+        
+        if ($hasLocalFiles && !$forceExtraction) {
+            // Cache hit: arquivos já existem e não estamos forçando
+            \Log::info("Local log files already exist - skipping S3 download", [
+                'incident_id' => $incidentId,
+                'local_path' => $logsPath,
+                'force_extraction' => false,
+                'available_files' => $this->countLocalLogFiles($logsPath),
+            ]);
+
+            return [
+                'incident_id' => $incidentId,
+                'local_path' => $logsPath,
+                'downloaded_count' => 0,
+                'extracted_count' => 0,
+                'skipped' => true,
+                'reason' => 'Local files already exist. Use --force to re-download.',
+                'period' => [
+                    'started_at' => $startedAt->toIso8601String(),
+                    'restored_at' => $restoredAt->toIso8601String(),
+                ],
+            ];
+        }
+
+        if ($hasLocalFiles && $forceExtraction) {
+            \Log::info("Force extraction enabled - re-downloading S3 logs", [
+                'incident_id' => $incidentId,
+                'local_path' => $logsPath,
+                'force_extraction' => true,
+            ]);
+        }
+
         $downloadedCount = 0;
         $totalPrefixes = count($s3Prefixes);
         
@@ -84,6 +123,7 @@ class S3LogDownloaderService
             ],
             'prefixes_to_download' => $totalPrefixes,
             'prefixes' => $s3Prefixes,
+            'force_extraction' => $forceExtraction,
         ]);
 
         // Baixar logs de cada prefix COM FILTRAGEM POR TIMESTAMP
@@ -92,11 +132,13 @@ class S3LogDownloaderService
             \Log::info("Downloading from S3 prefix [{$currentIndex}/{$totalPrefixes}]: {$prefix}");
             
             // Passar timestamps para filtrar no nome do arquivo
+            // Se forceExtraction=true, força re-download ignorando cache local
             $logsInPrefix = $this->downloadLogsFromPrefix(
                 $prefix, 
                 $logsPath,
                 $searchStartDate, // Filtro: >= este timestamp
-                $searchEndDate    // Filtro: <= este timestamp
+                $searchEndDate,   // Filtro: <= este timestamp
+                $forceExtraction  // Se true, re-download mesmo com arquivo local
             );
             $downloadedCount += $logsInPrefix;
             
@@ -166,20 +208,22 @@ class S3LogDownloaderService
      * OTIMIZAÇÕES:
      * - Paginação com MaxKeys=100 para listar rapidamente
      * - Timeout de 5s por request (evita travamentos)
-     * - Pula download se arquivo já existe (cache)
+     * - Pula download se arquivo já existe (cache) EXCETO com $forceDownload=true
      * - FILTRA por timestamp no nome do arquivo (formato ALB: YYYYMMDDTHHmmZ)
      *
      * @param  string  $prefix      Prefixo S3 (YYYY/MM/DD/)
      * @param  string  $localPath   Caminho local para salvar
-     * @param  Carbon|null  $startTime  Timestamp mínimo (filtro)
-     * @param  Carbon|null  $endTime    Timestamp máximo (filtro)
+     * @param  Carbon|null  $startTime      Timestamp mínimo (filtro)
+     * @param  Carbon|null  $endTime        Timestamp máximo (filtro)
+     * @param  bool         $forceDownload  Se true, re-baixa mesmo com arquivo local
      * @return int Quantidade de arquivos baixados
      */
     private function downloadLogsFromPrefix(
         string $prefix, 
         string $localPath, 
         ?Carbon $startTime = null, 
-        ?Carbon $endTime = null
+        ?Carbon $endTime = null,
+        bool $forceDownload = false
     ): int
     {
         $s3Path = $this->s3Path . '/' . $prefix;
@@ -264,8 +308,8 @@ class S3LogDownloaderService
                         
                         $localFile = $localPath . '/' . $filename;
 
-                        // Cache: não baixar se já existe
-                        if (File::exists($localFile)) {
+                        // Cache: não baixar se já existe EXCETO com forceDownload=true
+                        if (File::exists($localFile) && !$forceDownload) {
                             continue;
                         }
 
@@ -496,6 +540,43 @@ class S3LogDownloaderService
         }
 
         return glob($this->localBasePath . '/*.log');
+    }
+
+    /**
+     * Verifica se já existem arquivos .log ou .log.gz no diretório local
+     *
+     * @param  string  $dirPath  Caminho do diretório
+     * @return bool True se encontra .log ou .log.gz
+     */
+    private function hasLocalLogFiles(string $dirPath): bool
+    {
+        if (!File::isDirectory($dirPath)) {
+            return false;
+        }
+
+        // Procurar por .log ou .log.gz
+        $logFiles = glob($dirPath . '/*.log');
+        $gzFiles = glob($dirPath . '/*.log.gz');
+
+        return (count($logFiles) > 0 || count($gzFiles) > 0);
+    }
+
+    /**
+     * Conta quantos arquivos .log ou .log.gz existem no diretório
+     *
+     * @param  string  $dirPath  Caminho do diretório
+     * @return int Quantidade total de arquivos
+     */
+    private function countLocalLogFiles(string $dirPath): int
+    {
+        if (!File::isDirectory($dirPath)) {
+            return 0;
+        }
+
+        $logFiles = glob($dirPath . '/*.log');
+        $gzFiles = glob($dirPath . '/*.log.gz');
+
+        return count($logFiles) + count($gzFiles);
     }
 
     /**
