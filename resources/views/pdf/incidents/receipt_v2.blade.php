@@ -7,9 +7,9 @@
          IMAGENS PNG DO PROJETO
          
          LOGO: LogoPath helper
-         - Localização: assets/icone_regular.png (centralizado)
-         - Uso: LogoPath::get(), LogoPath::getUri(), LogoPath::exists()
-         - Compatível com DOMPDF 3.x via file:// protocol
+         - Localização: assets/logo_fundo_claro.png (para documentos)
+         - Uso: LogoPath::getPdfUriLight() para PDFs, LogoPath::getUri() para web
+         - Compatível com DOMPDF 3.x via base64 data URIs
          
          ÍCONES E EMOJIS: EmojiPath helper
          - Localização: public/emojis/{source}/{codepoint}.png (ex: public/emojis/twemoji/1f534.png)
@@ -35,11 +35,11 @@
                 <td style="width: 80px; vertical-align: top;">
                     {{-- ============================================================================
                          LOGO: Centralizado via LogoPath helper
-                         - Arquivo: assets/icone_regular.png
-                         - URI: file:// protocol (compatível DOMPDF 3.x)
+                         - Arquivo: assets/logo_fundo_claro.png (para documentos)
+                         - URI: base64 data URI (compatível DOMPDF 3.x)
                          ============================================================================ --}}
                     @php
-                        $logoUri = LogoPath::exists() ? LogoPath::getUri() : '';
+                        $logoUri = LogoPath::exists() ? LogoPath::getPdfUriLight() : '';
                     @endphp
                     @if($logoUri)
                         <img src="{{ $logoUri }}" alt="Logo Continuo Tecnologia" style="width: 70px; height: auto;" />
