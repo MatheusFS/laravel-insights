@@ -16,18 +16,23 @@ use MatheusFS\Laravel\Insights\ValueObjects\SREMetricsAggregate;
  * 3. Download de mês inteiro: php artisan alb:download-logs --month=2026-02
  * 4. Download de período customizado: php artisan alb:download-logs --start=2026-02-01T00:00:00Z --end=2026-02-05T23:59:59Z
  * 5. Force (ignorar cache): php artisan alb:download-logs --force
+ * 6. Particionado (paralelo): php artisan alb:download-logs --partition=1 --partitions=4
  * 
- * Agendamento (Kernel.php do app consumer):
- * $schedule->command('alb:download-logs')
- *          ->dailyAt('00:30')  // Rodar todo dia às 00:30 (baixa dados de ontem)
- *          ->withoutOverlapping();
+ * Agendamento Paralelizado (Kernel.php do app consumer):
+ * for ($i = 1; $i <= 4; $i++) {
+ *     $schedule->command('alb:download-logs', ["--partition=$i", '--partitions=4'])
+ *              ->dailyAt('00:30')
+ *              ->withoutOverlapping()
+ *              ->runInBackground();
+ * }
  * 
  * IMPORTANTE: Todos os logs são baixados para {access_logs_path} compartilhado.
  * Logs com intersecção de períodos são reutilizados (não re-baixam nem re-extraem).
+ * Com particionamento: cada worker processa 1/N do conjunto de logs.
  */
 class DownloadALBLogsCommand extends Command
 {
-    protected $signature = 'alb:download-logs {--date=} {--month=} {--start=} {--end=} {--force}';
+    protected $signature = 'alb:download-logs {--date=} {--month=} {--start=} {--end=} {--force} {--partition=1} {--partitions=1}';
 
     protected $description = 'Download ALB logs for SRE metrics calculation (shared unified directory, smart caching)';
 
@@ -41,6 +46,19 @@ class DownloadALBLogsCommand extends Command
 
     public function handle(): int
     {
+        // Validar partição
+        $partition = (int) $this->option('partition');
+        $totalPartitions = (int) $this->option('partitions');
+
+        if ($partition < 1 || $partition > $totalPartitions) {
+            $this->error("--partition deve estar entre 1 e --partitions (--partition={$partition}, --partitions={$totalPartitions})");
+            return Command::FAILURE;
+        }
+
+        if ($totalPartitions > 1) {
+            $this->info("🔀 Modo paralelo: processando partição {$partition}/{$totalPartitions}");
+        }
+
         try {
             // Prioridade: --start/--end > --month > --date > padrão (ontem)
             if ($this->option('start') || $this->option('end')) {
@@ -59,6 +77,26 @@ class DownloadALBLogsCommand extends Command
     }
 
     /**
+     * Determina se um arquivo de log deve ser processado por esta partição
+     * 
+     * Usa hash do nome do arquivo para distribuir de forma consistente
+     * entre workers sem risco de duplicação.
+     */
+    private function shouldProcessFile(string $filename): bool
+    {
+        $totalPartitions = (int) $this->option('partitions');
+        if ($totalPartitions <= 1) {
+            return true; // Sem particionamento, processar tudo
+        }
+
+        $partition = (int) $this->option('partition');
+        $fileHash = crc32($filename);
+        $assignedPartition = ($fileHash % $totalPartitions) + 1;
+
+        return $assignedPartition === $partition;
+    }
+
+    /**
      * Download de data específica ou ontem
      */
     private function downloadDate(): int
@@ -71,6 +109,9 @@ class DownloadALBLogsCommand extends Command
 
         $options = [
             'force' => $this->option('force') ?? false,
+            'partition' => (int) $this->option('partition'),
+            'totalPartitions' => (int) $this->option('partitions'),
+            'filterCallback' => fn($filename) => $this->shouldProcessFile($filename),
         ];
 
         $logs = $this->downloader->downloadForDate($date, $options);
@@ -105,6 +146,9 @@ class DownloadALBLogsCommand extends Command
 
         $options = [
             'force' => $this->option('force') ?? false,
+            'partition' => (int) $this->option('partition'),
+            'totalPartitions' => (int) $this->option('partitions'),
+            'filterCallback' => fn($filename) => $this->shouldProcessFile($filename),
         ];
 
         $aggregate = $this->downloader->downloadForMonth($month, $options);
@@ -127,6 +171,7 @@ class DownloadALBLogsCommand extends Command
      * 
      * IMPORTANTE: Usa o diretório unificado de logs (access_logs_path).
      * Se há intersecção com períodos anteriores, reutiliza logs já baixados.
+     * Com particionamento: cada worker processa 1/N do conjunto de logs.
      */
     private function downloadPeriod(): int
     {
@@ -161,10 +206,17 @@ class DownloadALBLogsCommand extends Command
             return Command::FAILURE;
         }
 
+        $options = [
+            'force' => $this->option('force') ?? false,
+            'partition' => (int) $this->option('partition'),
+            'totalPartitions' => (int) $this->option('partitions'),
+            'filterCallback' => fn($filename) => $this->shouldProcessFile($filename),
+        ];
+
         $result = $this->downloader->downloadLogsForPeriod(
             $start,
             $end,
-            $this->option('force') ?? false
+            $options
         );
 
         $this->info("✅ Logs baixados com sucesso!");
