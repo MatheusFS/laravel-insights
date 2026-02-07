@@ -35,7 +35,10 @@ class LogParserService
         $requestParts = explode(' ', $request);
 
         $method = $requestParts[0] ?? 'UNKNOWN';
-        $path = $requestParts[1] ?? '/';
+        $rawPath = $requestParts[1] ?? '/';
+        $path = $this->normalizePath($rawPath);
+        $host = $this->extractHost($rawPath);
+        $isStaging = $host !== null && str_contains($host, 'staging.refresher.com.br');
         $protocol = $requestParts[2] ?? 'HTTP/1.1';
 
         $clientIp = explode(':', $matches[4])[0];
@@ -59,6 +62,9 @@ class LogParserService
             'sent_bytes' => (int) $matches[14],
             'method' => $method,
             'path' => $path,
+            'raw_path' => $rawPath,
+            'host' => $host,
+            'is_staging' => $isStaging,
             'protocol' => $protocol,
             'user_agent' => $userAgent,
             'ssl_cipher' => $matches[17],
@@ -124,18 +130,20 @@ class LogParserService
      */
     public function classifyRequestType(string $path, string $userAgent = ''): string
     {
+        $normalizedPath = $this->normalizePath($path);
+
         // BOT detection (verifica user-agent) - PRIMEIRA PRIORIDADE
         if (!empty($userAgent) && $this->isBot($userAgent)) {
             return 'BOT';
         }
 
         // MALICIOUS detection (padrões de attack) - SEGUNDA PRIORIDADE
-        if ($this->isMaliciousRequest($path)) {
+        if ($this->isMaliciousRequest($normalizedPath)) {
             return 'BOT';
         }
 
         // API request
-        if (str_starts_with($path, '/api/')) {
+        if (str_starts_with($normalizedPath, '/api/')) {
             return 'API';
         }
 
@@ -148,7 +156,7 @@ class LogParserService
             '.pdf', '.zip', '.tar', '.gz',
         ];
 
-        $path_lower = strtolower($path);
+        $path_lower = strtolower($normalizedPath);
         foreach ($asset_extensions as $ext) {
             if (str_ends_with($path_lower, $ext)) {
                 return 'ASSETS';
@@ -168,13 +176,43 @@ class LogParserService
         ];
 
         foreach ($asset_patterns as $pattern) {
-            if (str_starts_with($path, $pattern)) {
+            if (str_starts_with($normalizedPath, $pattern)) {
                 return 'ASSETS';
             }
         }
 
         // UI requests (everything else)
         return 'UI';
+    }
+
+    /**
+     * Normaliza path quando o log traz URL completa (https://dominio:443/api/...)
+     */
+    private function normalizePath(string $path): string
+    {
+        $trimmed = trim($path);
+
+        if (str_starts_with($trimmed, 'http://') || str_starts_with($trimmed, 'https://')) {
+            $parsedPath = parse_url($trimmed, PHP_URL_PATH);
+            return $parsedPath ?: '/';
+        }
+
+        return $trimmed !== '' ? $trimmed : '/';
+    }
+
+    /**
+     * Extrai host quando o path vem como URL completa
+     */
+    private function extractHost(string $path): ?string
+    {
+        $trimmed = trim($path);
+
+        if (str_starts_with($trimmed, 'http://') || str_starts_with($trimmed, 'https://')) {
+            $host = parse_url($trimmed, PHP_URL_HOST);
+            return $host ? strtolower($host) : null;
+        }
+
+        return null;
     }
 
     /**
@@ -281,6 +319,28 @@ class LogParserService
             'i.php',
             'error.php',
             'shellalfa.php',
+            'admin.php',
+            'about.php',
+            'file.php',
+            'dropdown.php',
+            'autoload_classmap.php',
+            'classwithtostring.php',
+            'ioxi-o.php',
+            'abcd.php',
+            'css.php',
+            'wp-good.php',
+            '1.php',
+            'cong.php',
+            '222.php',
+            'xx.php',
+            'x.php',
+            'inputs.php',
+            'chosen.php',
+            'flower.php',
+            'adminfuns.php',
+            'themes.php',
+            'wp-l0gin.php',
+            'alfa.php',
 
             // Path traversal attempts
             '../',

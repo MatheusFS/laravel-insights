@@ -28,6 +28,9 @@ class TrafficAnalyzerService
 
         // Agrupar registros e rastrear erros
         foreach ($records as $record) {
+            if ($record['is_staging'] ?? false) {
+                continue;
+            }
             // Usar request_type já classificado pelo LogParserService
             $type = $record['request_type'] ?? 'UI';
 

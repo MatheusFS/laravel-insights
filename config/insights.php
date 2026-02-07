@@ -29,61 +29,112 @@ return [
     ],
 
     // ========================================
-    // INCIDENT CORRELATION
+    // SRE METRICS & INCIDENT CORRELATION
+    // (UNIFIED CONFIGURATION - ALB LOGS)
     // ========================================
 
-    'incident_correlation' => [
-        'enabled' => true,
+    /**
+     * UNIFIED ACCESS LOGS DIRECTORY
+     * 
+     * Todos os logs .log (independente de fonte, horário, incidente ou comando)
+     * são baixados e descompactados NESTE DIRETÓRIO COMPARTILHADO.
+     * 
+     * Benefício: Reutilização de logs quando há intersecção de períodos
+     * entre diferentes incidentes ou comandos (cache inteligente).
+     * 
+     * Estrutura:
+     * {access_logs_path}/
+     *   ├── alb_logs_2026_02_05_00.log      (descompactado de .gz)
+     *   ├── alb_logs_2026_02_05_01.log
+     *   └── ...
+     */
+    'access_logs_path' => env(
+        'INSIGHTS_ACCESS_LOGS_PATH',
+        storage_path('insights/access-logs')
+    ),
 
-        // Storage path para arquivos JSON de incidentes (não-sensível, versionado)
-        'storage_path' => env('INSIGHTS_STORAGE_PATH', base_path('docs/software-management/reliability')),
+    /**
+     * INCIDENT ANALYSIS OUTPUT DIRECTORY
+     * 
+     * JSONs calculados a partir dos logs são salvos aqui, organizados por incidente.
+     * Os JSONs são criados APÓS análise dos logs do access_logs_path.
+     * 
+     * Estrutura:
+     * {incidents_path}/
+     *   ├── INC-2026-001/
+     *   │   ├── alb_logs_analysis.json      (resultado da análise de logs)
+     *   │   ├── malicious_ips.json
+     *   │   └── incident_impact.json
+     *   ├── INC-2026-002/
+     *   │   └── ...
+     *   └── ...
+     */
+    'incidents_path' => env(
+        'INSIGHTS_INCIDENTS_PATH',
+        storage_path('insights/reliability/incidents')
+    ),
 
-        // AWS S3 Configuration for ALB Logs (sensível - no .env)
-        's3_bucket' => env('AWS_INCIDENT_S3_BUCKET', 'refresher-logs'),
-        's3_path' => env('AWS_INCIDENT_S3_PATH', 'AWSLogs/624082998591/elasticloadbalancing/us-east-1'),
-        'aws_region' => 'us-east-1', // Públicamente conhecido
+    /**
+     * SRE METRICS OUTPUT DIRECTORY
+     * 
+     * Métricas agregadas e calculadas a partir dos logs (não por incidente específico).
+     * Usado para relatórios de SLA/SLO, uptime, etc.
+     * 
+     * Estrutura:
+     * {sre_metrics_path}/
+     *   ├── 2026-02/
+     *   │   ├── 2026-02-01.json
+     *   │   ├── 2026-02-02.json
+     *   │   ├── ...
+     *   │   └── monthly_aggregate.json
+     *   ├── 2026-03/
+     *   │   └── ...
+     *   └── ...
+     */
+    'sre_metrics_path' => env(
+        'INSIGHTS_SRE_METRICS_PATH',
+        storage_path('insights/reliability/sre-metrics')
+    ),
 
-        // IP Classification Thresholds (não-sensível, versionado)
-        'ip_classification' => [
-            'malicious' => [
-                'error_rate_min' => 0.95, // 95% de erros
-                'volume_min' => 200,      // Mínimo de requests
-            ],
-            'suspicious' => [
-                'error_rate_min' => 0.90, // 90% de erros
-                'path_scanning_threshold' => 100, // Unique paths
-            ],
-        ],
-
-        // Time Window para correlação (não-sensível, versionado)
-        'default_lookback_hours' => 24,
-    ],
-
-    // ========================================
-    // SRE METRICS (CONTINUOUS ALB LOGS)
-    // ========================================
-
-    // Storage path para arquivos de SRE metrics (não-sensível, versionado)
-    'sre_metrics_storage' => storage_path('app/sre_metrics'),
-
-    // Configuração de fonte de logs ALB (não-sensível, versionado)
+    // Configuração de fonte de logs ALB
     'alb_logs' => [
-        // Fonte de logs ALB para SRE metrics: 'local', 's3', ou 'cloudwatch'
+        // Fonte de logs ALB: 'local', 's3', ou 'cloudwatch'
         'source' => env('ALB_LOG_SOURCE', 's3'),
         
-        // AWS S3 Configuration for SRE Metrics (sensível - bucket no .env)
+        // AWS S3 Configuration (sensível - bucket no .env)
         's3' => [
             'bucket' => env('AWS_ALB_LOGS_BUCKET', 'refresher-logs'),
             'path' => env('AWS_ALB_LOGS_PATH', 'AWSLogs/624082998591/elasticloadbalancing/us-east-1'),
-            'region' => 'us-east-1', // Públicamente conhecido
+            'region' => env('AWS_REGION', 'us-east-1'),
         ],
         
         // CloudWatch Configuration (se usar cloudwatch como source)
         'cloudwatch' => [
             'log_group' => env('AWS_CLOUDWATCH_LOG_GROUP', '/aws/elasticloadbalancing/refresher'),
-            'region' => 'us-east-1',
+            'region' => env('AWS_REGION', 'us-east-1'),
         ],
     ],
+
+    // IP Classification Thresholds para incident correlation
+    'ip_classification' => [
+        'malicious' => [
+            'error_rate_min' => 0.95, // 95% de erros
+            'volume_min' => 200,      // Mínimo de requests
+        ],
+        'suspicious' => [
+            'error_rate_min' => 0.90, // 90% de erros
+            'path_scanning_threshold' => 100, // Unique paths
+        ],
+    ],
+
+    // User impact thresholds
+    'user_impact' => [
+        // Percentual de erro por usuário para marcar como crítico
+        'critical_error_rate_min' => 10.0,
+    ],
+
+    // Time Window para correlação de incidentes
+    'default_lookback_hours' => 24,
 
     // SLO/SLA targets por tipo de serviço (não-sensível, versionado)
     'sre_targets' => [

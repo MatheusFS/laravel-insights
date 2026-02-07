@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\File;
  *
  * Responsabilidade: I/O de arquivos relacionados a incidentes
  * Infrastructure layer
+ * 
+ * ARQUITETURA DE DIRETÓRIOS:
+ * - access_logs_path: Diretório UNIFICADO para TODOS os logs .log (compartilhado)
+ * - incidents_path: Diretório para JSON de análises por incidente (INC-2026-001/*.json)
  */
 class FileStorageService
 {
@@ -16,7 +20,8 @@ class FileStorageService
 
     public function __construct()
     {
-        $this->basePath = config('insights.incident_correlation.storage_path', storage_path('app/incidents'));
+        // Usar a nova configuração incidents_path ao invés de incident_correlation.storage_path
+        $this->basePath = config('insights.incidents_path', storage_path('insights/reliability/incidents'));
     }
 
     /**
@@ -40,6 +45,10 @@ class FileStorageService
     /**
      * Lê todos os arquivos de log bruto de uma pasta
      *
+     * @deprecated Este método é legado e não deve ser usado.
+     *             Use config('insights.access_logs_path') para acessar logs unificados.
+     *             Os logs agora são compartilhados entre incidentes no diretório unificado.
+     * 
      * @param  string  $subfolder  Subpasta (ex: '.raw_logs')
      * @return array Array de [filename => lines]
      */
@@ -103,14 +112,19 @@ class FileStorageService
 
     /**
      * Retorna o diretório compartilhado de logs brutos
+     * 
+     * @deprecated Este método é legado e não deve ser usado.
+     *             Use config('insights.access_logs_path') para o diretório unificado de logs.
      */
     public function getRawLogsDirectory(string $subfolder = '.raw_logs'): string
     {
         return $this->basePath.'/'.$subfolder;
     }
-
     /**
      * Garante que o diretório compartilhado de logs existe
+     * @deprecated Este método é legado e não deve ser usado.
+     *             O diretório unificado é criado automaticamente por S3LogDownloaderService.
+     *
      */
     public function ensureRawLogsDirectory(string $subfolder = '.raw_logs'): void
     {
@@ -124,17 +138,32 @@ class FileStorageService
     /**
      * Salva dados processados em JSON
      *
+     * Salva no padrão de diretório: {incidents_path}/INC-ID/{filename}.json
+     * Garante isolamento de JSONs por incidente.
+     * 
+     * Exemplo:
+     * - Entrada: incidentId=INC-2026-001, filename=alb_logs_analysis
+     * - Saída: {incidents_path}/INC-2026-001/alb_logs_analysis.json
+     * 
      * @param  string  $incidentId  ID do incidente
-     * @param  string  $filename  Nome do arquivo (ex: 'analyzed_traffic.json')
+     * @param  string  $filename  Nome do arquivo (ex: 'alb_logs_analysis')
      * @param  array  $data  Dados para salvar
      */
     public function saveJsonData(string $incidentId, string $filename, array $data): void
     {
-        $this->ensureIncidentDirectory($incidentId);
+        $incidentDir = $this->ensureIncidentDirectory($incidentId);
 
-        $filepath = $this->getIncidentPath($incidentId).'/'.$filename;
+        // Adicionar .json se não tiver
+        $filename = str_ends_with($filename, '.json') ? $filename : $filename . '.json';
+
+        $filepath = $incidentDir . '/' . $filename;
 
         File::put($filepath, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+        \Log::info("Saved JSON data", [
+            'incident_id' => $incidentId,
+            'file' => $filepath,
+        ]);
     }
 
     /**
@@ -146,10 +175,13 @@ class FileStorageService
      */
     public function readJsonData(string $incidentId, string $filename): array
     {
-        $filepath = $this->getIncidentPath($incidentId).'/'.$filename;
+        // Adicionar .json se não tiver
+        $filename = str_ends_with($filename, '.json') ? $filename : $filename . '.json';
 
-        if (! File::exists($filepath)) {
-            throw new \RuntimeException("JSON file not found: {$filename}");
+        $filepath = $this->getIncidentPath($incidentId) . '/' . $filename;
+
+        if (!File::exists($filepath)) {
+            throw new \RuntimeException("JSON file not found: {$filename} for incident {$incidentId}");
         }
 
         return json_decode(File::get($filepath), true);
@@ -165,9 +197,12 @@ class FileStorageService
      */
     public function saveCsvData(string $incidentId, string $filename, array $rows, ?array $headers = null): void
     {
-        $this->ensureIncidentDirectory($incidentId);
+        $incidentDir = $this->ensureIncidentDirectory($incidentId);
 
-        $filepath = $this->getIncidentPath($incidentId).'/'.$filename;
+        // Adicionar .csv se não tiver
+        $filename = str_ends_with($filename, '.csv') ? $filename : $filename . '.csv';
+
+        $filepath = $incidentDir . '/' . $filename;
 
         $fp = fopen($filepath, 'w');
 
@@ -180,22 +215,38 @@ class FileStorageService
         }
 
         fclose($fp);
+
+        \Log::info("Saved CSV data", [
+            'incident_id' => $incidentId,
+            'file' => $filepath,
+        ]);
     }
 
     /**
      * Lista todos os incidentes disponíveis
      *
+     * Busca por diretórios com padrão INC-YYYY-NNN
+     *
      * @return array Array de IDs de incidentes
      */
     public function listIncidents(): array
     {
-        if (! File::isDirectory($this->basePath)) {
+        if (!File::isDirectory($this->basePath)) {
             return [];
         }
 
-        $directories = File::directories($this->basePath);
+        $dirs = File::directories($this->basePath);
+        $incidentIds = [];
 
-        return array_map(fn ($dir) => basename($dir), $directories);
+        foreach ($dirs as $dir) {
+            $dirName = basename($dir);
+            // Validar padrão INC-YYYY-NNN
+            if (preg_match('/^INC-\d{4}-\d{3}$/i', $dirName)) {
+                $incidentIds[] = $dirName;
+            }
+        }
+
+        return $incidentIds;
     }
 
     /**
@@ -205,28 +256,39 @@ class FileStorageService
      */
     public function incidentExists(string $incidentId): bool
     {
-        return File::isDirectory($this->getIncidentPath($incidentId));
+        $incidentPath = $this->getIncidentPath($incidentId);
+        return File::isDirectory($incidentPath);
     }
 
     /**
-     * Cria diretório de incidente se não existir
-     *
-     * @param  string  $incidentId  ID do incidente
+     * Cria/garante diretório de incidente
      */
-    public function ensureIncidentDirectory(string $incidentId): void
+    private function ensureIncidentDirectory(string $incidentId): string
     {
-        $path = $this->getIncidentPath($incidentId);
+        $incidentDir = $this->getIncidentPath($incidentId);
 
-        if (! File::isDirectory($path)) {
-            File::makeDirectory($path, 0755, true);
+        if (!File::isDirectory($incidentDir)) {
+            File::makeDirectory($incidentDir, 0755, true);
         }
+
+        return $incidentDir;
     }
 
     /**
-     * Retorna path completo do incidente
+     * Retorna caminho do incidente
      */
     private function getIncidentPath(string $incidentId): string
     {
-        return $this->basePath.'/'.$incidentId;
+        return $this->basePath . '/' . $incidentId;
+    }
+
+    /**
+     * Cria diretório base se não existir
+     */
+    private function ensureBaseDirectory(): void
+    {
+        if (!File::isDirectory($this->basePath)) {
+            File::makeDirectory($this->basePath, 0755, true);
+        }
     }
 }

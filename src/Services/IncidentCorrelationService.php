@@ -187,9 +187,27 @@ class IncidentCorrelationService
             }
         }
 
+        $criticalThreshold = (float)config('insights.user_impact.critical_error_rate_min', 10.0);
+        $criticalUsers = [];
+
+        foreach ($affectedUsers as &$user) {
+            $requests = $user['requests'] ?? 0;
+            $errors = $user['errors'] ?? 0;
+            $errorRate = $requests > 0 ? ($errors / $requests) * 100 : 0;
+
+            $user['error_rate'] = round($errorRate, 2);
+            $user['is_critical'] = $user['error_rate'] > $criticalThreshold;
+
+            if ($user['is_critical']) {
+                $criticalUsers[] = $user;
+            }
+        }
+        unset($user);
+
         return [
             'total' => count($affectedUsers),
             'users' => array_values($affectedUsers),
+            'critical_affected_users' => $criticalUsers,
             'sources' => [
                 'pageviews' => $pageviews->count(),
                 'logins' => $logins->count(),

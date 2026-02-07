@@ -45,6 +45,25 @@ interface ALBLogDownloaderInterface
     public function downloadForMonth(string $month, array $options = []): array;
 
     /**
+     * Baixa logs para um período customizado (data/hora início até fim)
+     * 
+     * Usa o diretório unificado de logs (access_logs_path).
+     * Se há intersecção com períodos anteriores, reutiliza logs já baixados.
+     * 
+     * Fluxo:
+     * 1. Itera por dias entre $start e $end
+     * 2. Tenta usar dados já cacheados (sre_metrics_path)
+     * 3. Se não houver, baixa logs do S3 e analisa
+     * 4. Retorna dados agregados do período
+     * 
+     * @param Carbon $start Data/hora de início (qualquer timezone)
+     * @param Carbon $end Data/hora de fim (qualquer timezone)
+     * @param bool $force Forçar re-download mesmo com cache (padrão: false)
+     * @return array Agregação do período customizado
+     */
+    public function downloadLogsForPeriod(Carbon $start, Carbon $end, bool $force = false): array;
+
+    /**
      * Retorna caminho onde logs são armazenados
      * 
      * @return string Caminho base de armazenamento

@@ -21,7 +21,8 @@ class IncidentAnalysisService
         private IncidentCorrelationService $correlationService,
         private S3LogDownloaderService $s3Downloader
     ) {
-        $this->incidents_base_path = config('insights.incident_correlation.storage_path', storage_path('app/incidents'));
+        // Diretório para JSON de incidentes
+        $this->incidents_base_path = config('insights.incidents_path', storage_path('insights/reliability/incidents'));
     }
 
     /**
@@ -50,29 +51,30 @@ class IncidentAnalysisService
             $restored_at = Carbon::parse($incidentData['timestamp']['restored_at'] ?? $incidentData['restored_at'] ?? null);
 
             if (! $started_at || ! $restored_at) {
-                throw new \RuntimeException("Incident {$incidentId} missing started_at or restored_at");
+                throw new \RuntimeException("Incident {$incidentId} não pode ser analisado: incidente aberto (sem restored_at) ou started_at faltando. Incidentes abertos não têm período definido para análise de logs.");
             }
 
             // 2. Baixar logs do S3 para pasta específica do incidente
+            // Nota: timestamps são agora carregados do JSON do incidente dentro do método
             $download_result = $this->s3Downloader->downloadLogsForIncident(
                 $incidentId,
-                $started_at,
-                $restored_at
+                useMargins: true,
+                forceExtraction: false
             );
 
-            if ($download_result['downloaded_count'] === 0) {
-                throw new \RuntimeException("No logs downloaded from S3 for {$incidentId}");
+            if ($download_result['downloaded_count'] === 0 && $download_result['extracted_count'] === 0) {
+                \Log::warning("No new logs downloaded for {$incidentId}; relying on existing extracted logs if available.");
             }
 
-            // 3. Ler logs do diretório específico do incidente
-            $incident_logs_dir = "{$this->incidents_base_path}/.raw_logs/{$incidentId}";
-            if (! File::isDirectory($incident_logs_dir)) {
-                throw new \RuntimeException("Incident logs directory not found: {$incident_logs_dir}");
+            // 3. Ler logs do diretório unificado de access logs
+            $access_logs_dir = config('insights.access_logs_path', storage_path('insights/access-logs'));
+            if (! File::isDirectory($access_logs_dir)) {
+                throw new \RuntimeException("Access logs directory not found: {$access_logs_dir}");
             }
 
-            $log_files = File::glob("{$incident_logs_dir}/*.log");
+            $log_files = File::glob("{$access_logs_dir}/*.log");
             if (empty($log_files)) {
-                throw new \RuntimeException("No .log files found in: {$incident_logs_dir}");
+                throw new \RuntimeException("No .log files found in: {$access_logs_dir}");
             }
 
             // Ler todas as linhas de todos os arquivos .log
@@ -85,22 +87,20 @@ class IncidentAnalysisService
             }
 
             if (empty($logs)) {
-                throw new \RuntimeException("No log lines found in {$incident_logs_dir}/*.log");
+                throw new \RuntimeException("No log lines found in {$access_logs_dir}/*.log");
             }
 
             // 4. Delegar análise para pacote
             $result = $this->correlationService->analyzeLogs($logs);
 
-            // 5. Salvar resultado
-            $incident_dir = "{$this->incidents_base_path}/{$incidentId}";
-            if (! File::isDirectory($incident_dir)) {
-                File::makeDirectory($incident_dir, 0755, true);
-            }
+            // 5. Adicionar metadata do incidente ao resultado
+            $result['incident_id'] = $incidentId;
+            $result['started_at'] = $started_at->toIso8601String();
+            $result['restored_at'] = $restored_at->toIso8601String();
 
-            File::put(
-                "{$incident_dir}/alb_logs_analysis.json",
-                json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
-            );
+            // 6. Salvar resultado em {incidents_path}/INC-ID/alb_logs_analysis.json
+            $fileStorageService = app(\MatheusFS\Laravel\Insights\Services\Infrastructure\FileStorageService::class);
+            $fileStorageService->saveJsonData($incidentId, 'alb_logs_analysis', $result);
 
             return $result;
         } finally {
@@ -124,12 +124,13 @@ class IncidentAnalysisService
             $this->acquireLock($incidentId, 'correlate_users');
 
             // Ler análise de logs para pegar IPs legítimos
-            $alb_logs_file = "{$this->incidents_base_path}/{$incidentId}/alb_logs_analysis.json";
-            if (! File::exists($alb_logs_file)) {
+            $fileStorageService = app(\MatheusFS\Laravel\Insights\Services\Infrastructure\FileStorageService::class);
+            $analysis = $fileStorageService->readJsonData($incidentId, 'alb_logs_analysis');
+
+            if (empty($analysis)) {
                 throw new \RuntimeException('ALB logs analysis not found. Run analyzeLogs first.');
             }
 
-            $analysis = json_decode(File::get($alb_logs_file), true);
             $legitimateIps = $analysis['classified']['legitimate'] ?? [];
             $suspiciousIps = $analysis['classified']['suspicious'] ?? [];
             
@@ -166,12 +167,31 @@ class IncidentAnalysisService
                         }
                     }
                 }
+                unset($user);
+
+                $criticalThreshold = (float)config('insights.user_impact.critical_error_rate_min', 10.0);
+                $criticalUsers = [];
+
+                foreach ($result['users'] as &$user) {
+                    $requests = $user['requests'] ?? 0;
+                    $errors = $user['errors'] ?? 0;
+                    $errorRate = $requests > 0 ? ($errors / $requests) * 100 : 0;
+
+                    $user['error_rate'] = round($errorRate, 2);
+                    $user['is_critical'] = $user['error_rate'] > $criticalThreshold;
+
+                    if ($user['is_critical']) {
+                        $criticalUsers[] = $user;
+                    }
+                }
+                unset($user);
+
+                $result['critical_affected_users'] = $criticalUsers;
             }
 
             // Salvar resultado
-            $analysis_dir = "{$this->incidents_base_path}/{$incidentId}";
             File::put(
-                "{$analysis_dir}/affected_users.json",
+                "{$this->incidents_base_path}/{$incidentId}/affected_users.json",
                 json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
             );
 
@@ -212,9 +232,8 @@ class IncidentAnalysisService
             );
 
             // Salvar resultado
-            $analysis_dir = "{$this->incidents_base_path}/{$incidentId}";
             File::put(
-                "{$analysis_dir}/incident_metrics.json",
+                "{$this->incidents_base_path}/{$incidentId}/incident_metrics.json",
                 json_encode($metrics, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
             );
 
@@ -245,9 +264,8 @@ class IncidentAnalysisService
         $rules = $this->correlationService->generateWAFRules($malicious_ips, $incidentId);
 
         // Salvar recomendação (não aplicada)
-        $analysis_dir = "{$this->incidents_base_path}/{$incidentId}";
         File::put(
-            "{$analysis_dir}/waf_rules_recommended.json",
+            "{$this->incidents_base_path}/{$incidentId}/waf_rules_recommended.json",
             json_encode($rules, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
         );
 
@@ -300,9 +318,8 @@ class IncidentAnalysisService
             $metrics = $this->calculateImpactMetrics($incidentId, $startTime, $endTime);
 
             // Salvar impacto consolidado
-            $analysis_dir = "{$this->incidents_base_path}/{$incidentId}";
-            $alb_analysis = json_decode(File::get("{$analysis_dir}/alb_logs_analysis.json"), true);
-            $affected_users = json_decode(File::get("{$analysis_dir}/affected_users.json"), true);
+            $alb_analysis = json_decode(File::get("{$this->incidents_base_path}/{$incidentId}/alb_logs_analysis.json"), true);
+            $affected_users = json_decode(File::get("{$this->incidents_base_path}/{$incidentId}/affected_users.json"), true);
 
             $impact = [
                 'incident_id' => $incidentId,
@@ -313,7 +330,7 @@ class IncidentAnalysisService
             ];
 
             File::put(
-                "{$analysis_dir}/impact.json",
+                "{$this->incidents_base_path}/{$incidentId}/impact.json",
                 json_encode($impact, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
             );
 

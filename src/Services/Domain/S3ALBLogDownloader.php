@@ -172,27 +172,26 @@ class S3ALBLogDownloader implements ALBLogDownloaderInterface
         $incident_id = 'SRE-' . $date->format('Y-m-d');
         
         // Usar startOfDay para ambos - evita problemas com timezone ao converter para UTC
-        $started_at = $date->copy()->startOfDay();
-        $restored_at = $date->copy()->startOfDay()->addDay();
-
         // Usar S3LogDownloaderService para baixar logs
-        // useMargins=false porque queremos período exato do dia (sem 1h antes/depois)
-        // Passar $options['force'] para forçar re-extração se necessário
+        // Nota: timestamps são agora carregados do JSON do incidente dentro do método
+        // forceExtraction vem de $options['force'] se fornecido
         $forceExtraction = $options['force'] ?? false;
         $result = $this->s3_service->downloadLogsForIncident(
             $incident_id,
-            $started_at,
-            $restored_at,
-            false, // Sem margens - período exato
-            $forceExtraction // Passar force para a extração
+            useMargins: false,
+            forceExtraction: $forceExtraction
         );
 
-        // Listar arquivos .log baixados
+        // Listar todos os arquivos .log do diretório unificado
+        // IMPORTANTE: Como todos os logs vão para o mesmo diretório (access_logs_path),
+        // aqui pegamos TODOS os logs disponíveis, não apenas do período específico.
+        // A filtragem por timestamp acontece depois, no parseamento dos logs.
         $log_files = $this->s3_service->listLogsForIncident($incident_id);
         
         Log::info("Found {$result['downloaded_count']} files in S3 for {$date->format('Y-m-d')}", [
             'extracted_count' => $result['extracted_count'],
             'log_files_to_parse' => count($log_files),
+            'note' => 'Log files from unified directory (may include logs from other periods)',
         ]);
 
         // Parsear todos os logs usando LogParserService
@@ -237,6 +236,48 @@ class S3ALBLogDownloader implements ALBLogDownloaderInterface
             ],
             'timestamp' => now()->toIso8601String(),
         ];
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function downloadLogsForPeriod(Carbon $start, Carbon $end, bool $force = false): array
+    {
+        // Normalizar datas para UTC startOfDay
+        $current = $start->clone()->setTimezone('UTC')->startOfDay();
+        $end_date = $end->clone()->setTimezone('UTC')->startOfDay()->addDay();
+
+        $aggregate = [
+            'by_request_type' => [
+                'API' => ['total_requests' => 0, 'errors_5xx' => 0],
+                'UI' => ['total_requests' => 0, 'errors_5xx' => 0],
+                'BOT' => ['total_requests' => 0, 'errors_5xx' => 0],
+                'ASSETS' => ['total_requests' => 0, 'errors_5xx' => 0],
+            ],
+            'period' => [
+                'start' => $start->toIso8601String(),
+                'end' => $end->toIso8601String(),
+            ],
+            'days_included' => 0,
+        ];
+
+        $options = ['force' => $force];
+        
+        // Iterar por cada dia do período
+        while ($current->lt($end_date)) {
+            $day_data = $this->downloadForDate($current, $options);
+            
+            // Agregar resultados
+            foreach (['API', 'UI', 'BOT', 'ASSETS'] as $type) {
+                $aggregate['by_request_type'][$type]['total_requests'] += $day_data['by_request_type'][$type]['total_requests'] ?? 0;
+                $aggregate['by_request_type'][$type]['errors_5xx'] += $day_data['by_request_type'][$type]['errors_5xx'] ?? 0;
+            }
+            
+            $aggregate['days_included']++;
+            $current->addDay();
+        }
+
+        return $aggregate;
     }
 
     /**

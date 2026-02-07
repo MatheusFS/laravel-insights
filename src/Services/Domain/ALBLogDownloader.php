@@ -7,18 +7,23 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\File;
 
 /**
- * Downloader de Logs ALB
+ * Downloader de Logs ALB (Implementação Mock/Local)
+ * 
+ * IMPORTANTE: Esta é uma implementação mock para desenvolvimento e testes.
+ * Em produção, use S3ALBLogDownloader que baixa logs reais do S3 para o diretório unificado.
  * 
  * Responsabilidades:
- * 1. Baixar logs do ALB (CloudWatch em produção, local em dev)
+ * 1. Simular logs ALB em ambiente de desenvolvimento
  * 2. Analisar e agregar por tipo de serviço
- * 3. Armazenar em storage estruturado (sre_metrics/YYYY-MM/YYYY-MM-DD.json)
+ * 3. Armazenar JSON calculados em sre_metrics/YYYY-MM/YYYY-MM-DD.json
  * 4. Fornecer interface para leitura histórica
+ * 
+ * NOTA: Esta implementação NÃO baixa logs para access_logs_path pois usa dados mock locais.
  */
 class ALBLogDownloader implements ALBLogDownloaderInterface
 {
     /**
-     * Caminho base de armazenamento
+     * Caminho base para armazenamento de JSON calculados (NÃO logs brutos)
      */
     private string $storage_path;
 
@@ -32,7 +37,7 @@ class ALBLogDownloader implements ALBLogDownloaderInterface
         ?string $base_path = null
     ) {
         $this->analyzer = $analyzer;
-        $this->storage_path = $base_path ?? storage_path('app/sre_metrics');
+        $this->storage_path = $base_path ?: (config('insights.sre_metrics_path') ?: storage_path('insights/reliability/sre-metrics'));
     }
 
     /**
@@ -182,6 +187,49 @@ class ALBLogDownloader implements ALBLogDownloaderInterface
      * Estrutura vazia de logs (quando nenhum dado disponível)
      * 
      * @return array
+     * @inheritDoc
+     */
+    public function downloadLogsForPeriod(Carbon $start, Carbon $end, bool $force = false): array
+    {
+        // Normalizar datas para UTC startOfDay
+        $current = $start->clone()->setTimezone('UTC')->startOfDay();
+        $end_date = $end->clone()->setTimezone('UTC')->startOfDay()->addDay();
+
+        $aggregate = [
+            'by_request_type' => [
+                'API' => ['total_requests' => 0, 'errors_5xx' => 0],
+                'UI' => ['total_requests' => 0, 'errors_5xx' => 0],
+                'BOT' => ['total_requests' => 0, 'errors_5xx' => 0],
+                'ASSETS' => ['total_requests' => 0, 'errors_5xx' => 0],
+            ],
+            'period' => [
+                'start' => $start->toIso8601String(),
+                'end' => $end->toIso8601String(),
+            ],
+            'days_included' => 0,
+        ];
+
+        $options = ['force' => $force];
+        
+        // Iterar por cada dia do período
+        while ($current->lt($end_date)) {
+            $day_data = $this->downloadForDate($current, $options);
+            
+            // Agregar resultados
+            foreach (['API', 'UI', 'BOT', 'ASSETS'] as $type) {
+                $aggregate['by_request_type'][$type]['total_requests'] += $day_data['by_request_type'][$type]['total_requests'] ?? 0;
+                $aggregate['by_request_type'][$type]['errors_5xx'] += $day_data['by_request_type'][$type]['errors_5xx'] ?? 0;
+            }
+            
+            $aggregate['days_included']++;
+            $current->addDay();
+        }
+
+        return $aggregate;
+    }
+
+    /**
+     * @inheritDoc
      */
     private function getEmptyLogStructure(): array
     {

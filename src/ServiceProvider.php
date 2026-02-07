@@ -18,6 +18,7 @@ use MatheusFS\Laravel\Insights\Services\Domain\S3ALBLogDownloader;
 use MatheusFS\Laravel\Insights\Services\Domain\ALBLogAnalyzer;
 use MatheusFS\Laravel\Insights\Services\Infrastructure\S3LogDownloaderService;
 use MatheusFS\Laravel\Insights\Console\Commands\DownloadALBLogsCommand;
+use MatheusFS\Laravel\Insights\Console\Commands\TestIncidentAnalysis;
 
 class ServiceProvider extends BaseServiceProvider {
 
@@ -52,14 +53,14 @@ class ServiceProvider extends BaseServiceProvider {
                     $app->make(ALBLogAnalyzer::class),
                     $app->make(S3LogDownloaderService::class),
                     $app->make(LogParserService::class),
-                    config('insights.sre_metrics_path')
+                    config('insights.storage_path')
                 );
             }
             
             // Default: Local/Mock implementation
             return new ALBLogDownloader(
                 $app->make(ALBLogAnalyzer::class),
-                config('insights.sre_metrics_path')
+                config('insights.storage_path')
             );
         });
 
@@ -79,6 +80,7 @@ class ServiceProvider extends BaseServiceProvider {
         if ($this->app->runningInConsole()) {
             $this->commands([
                 DownloadALBLogsCommand::class,
+                TestIncidentAnalysis::class,
             ]);
 
             $this->publishes([

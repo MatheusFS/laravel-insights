@@ -36,22 +36,17 @@ class IncidentAnalysisServiceTest extends TestCase
 
         $this->incidents_base_path = storage_path('app/incidents');
         
-        // Configure insights config
-        config()->set('insights.incident_correlation', [
-            'enabled' => true,
-            's3_bucket' => 'test-bucket',
-            's3_path' => 'test-path',
-            'aws_region' => 'us-east-1',
-            'storage_path' => $this->incidents_base_path,
-        ]);
+        // Configure insights config usando as novas chaves
+        config()->set('insights.access_logs_path', storage_path('insights/access-logs'));
+        config()->set('insights.incidents_path', $this->incidents_base_path);
 
         $this->service = app(IncidentAnalysisService::class);
         $this->downloader = app(S3LogDownloaderService::class);
 
-        // Limpar arquivos de teste anterior
-        $test_incident_dir = "{$this->incidents_base_path}/.raw_logs/INC-TEST-001";
-        if (File::isDirectory($test_incident_dir)) {
-            File::deleteDirectory($test_incident_dir);
+        // Limpar arquivos de teste anterior do diretório unificado
+        $test_access_logs_dir = config('insights.access_logs_path');
+        if (File::isDirectory($test_access_logs_dir)) {
+            File::cleanDirectory($test_access_logs_dir);
         }
     }
 
@@ -61,6 +56,16 @@ class IncidentAnalysisServiceTest extends TestCase
      */
     public function test_analyze_logs_accepts_incident_data(): void
     {
+        // Skip se AWS SDK não estiver instalado
+        if (!class_exists(\Aws\S3\S3Client::class)) {
+            $this->markTestSkipped('AWS SDK not installed - install via: composer require aws/aws-sdk-php');
+        }
+
+        // Skip se não houver credenciais AWS configuradas
+        if (empty(config('filesystems.disks.s3.key'))) {
+            $this->markTestSkipped('AWS credentials not configured - skipping test that requires S3');
+        }
+
         // Arrange: Criar incident data de teste
         $incident_id = 'INC-TEST-001';
         $incident_data = [

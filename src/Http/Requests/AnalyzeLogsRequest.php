@@ -24,7 +24,7 @@ class AnalyzeLogsRequest extends FormRequest
             'incident_data' => ['required', 'array'],
             'incident_data.timestamp' => ['required', 'array'],
             'incident_data.timestamp.started_at' => ['required', 'date'],
-            'incident_data.timestamp.restored_at' => ['required', 'date'],
+            'incident_data.timestamp.restored_at' => ['nullable', 'date'],
         ];
     }
 
@@ -36,7 +36,7 @@ class AnalyzeLogsRequest extends FormRequest
         return [
             'incident_data.required' => 'Dados do incidente são obrigatórios',
             'incident_data.timestamp.started_at.required' => 'Data de início do incidente é obrigatória',
-            'incident_data.timestamp.restored_at.required' => 'Data de restauração do incidente é obrigatória',
+            'incident_data.timestamp.restored_at.required' => 'Data de restauração é obrigatória para analisar incidentes fechados',
         ];
     }
 }
