@@ -3,6 +3,112 @@
 @section('title', 'Comprovante de Incidente - ' . $incident['id'])
 
 @section('content')
+    @php
+        // ========================================================================
+        // PALETA EXTENSA DE ÍCONES PNG (70 VARIAÇÕES)
+        // 10 cores × 7 tipos = 70 ícones disponíveis
+        // Sem nenhum caractere Unicode/Emoji
+        // ========================================================================
+        $icons = [
+            // BLUE - Azul (#1976d2)
+            'blue_dot'      => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgIBEwYhOULLv0H8Z+3qWHooYRl0J0ANPISIxiZE1MhBShA0ZiTYcBkm0gz0kMDLT2NDG2YMQDLo3oMQ0AE4AacNwf+vgAAAAASUVORK5CYII=',
+            'blue_square'   => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAN0lEQVQokWP4f+EfGf8xMBIwYhOULLv0H8Z+3qWHokZGwgAY/v//j4GRkZGRgYGRkZGBgYEAAM4bHBE5EQNxAAAAAElFTkSuQmCC',
+            'blue_triangle' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAP0lEQVQokWNgGPgPxv/BwMhIwIhNULLs0n8Y+3mXHooaGRkYGP7//4+BgZGRkYGRkZGRgYGRkYEBAIvVGQNJFSyiAAAAAElFTkSuQmCC',
+            'blue_check'    => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAOElEQVQokWP4d+EfGf8xMBIwYhOULLv0H8Z+3qWHokZGBgaG/xf+kRkYGRkZGRkZGRgZGRkYGAAAx0AZ+0P5SZQAAAAASUVORK5CYII=',
+            'blue_x'        => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAOUlEQVQokWP4f+EfGf8xMBIwYhOULLv0H8Z+3qWHokZGBgaG/xcYGBkZGRkZGRkZGRgYGBkYGAAAyEUZ+jkW4XoAAAAASUVORK5CYII=',
+            'blue_warning'  => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAOUlEQVQokWNgGPhPwH8MjIQMGAUl/v//z8BIyIBRUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkEJANy+GP1Aw1VgAAAAAElFTkSuQmCC',
+            'blue_info'     => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAN0lEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJb9h+MBIwIBRUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+
+            // RED - Vermelho (#d32f2f)
+            'red_dot'       => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgIBEwYhO8rK//H8bWvXgRRQ0jLoXoAKaRkRjFyJqYCClCB4zEmg4DJNtAnpMYGGjtaWJswYgHXBrRYxoAuR4aQO299UsAAAAASUVORK5CYII=',
+            'red_square'    => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAN0lEQVQokWNgYGD4z8DAwMjAwMDIyMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA8B8MDAz/GRgYGBkYGAAAymoZ+6ZCPaEAAAAASUVORK5CYII=',
+            'red_triangle'  => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAP0lEQVQokWNgYGBgYGD8z8DAwMjAwMDIyMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwAA/GQUZ9QhqQAAAAElFTkSuQmCC',
+            'red_check'     => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAOElEQVQokWNgYGBgYGD8z8DAwMjAwMDIyMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA8AAM/GQUZ9QhqQAAAAElFTkSuQmCC',
+            'red_x'         => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAOUlEQVQokWNgYGBgYGD8z8DAwMjAwMDIyMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwAA/GQUZ9QhqQAAAAElFTkSuQmCC',
+            'red_warning'   => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAOUlEQVQokWNgYGBgYGD8z8DAwMjAwMDIyMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwAA/GQUZ9QhqQAAAAElFTkSuQmCC',
+            'red_info'      => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAN0lEQVQokWNgYGD4z8DAwMjAwMDIyMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwAA/GQUZ9QhqQAAAAElFTkSuQmCC',
+
+            // ORANGE - Laranja (#f57c00)
+            'orange_dot'    => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAQ0lEQVQokWNgIBEwYhP8WsPwH8bmbkFVw4hLITqAaWQkRjGyJiZCitABI7GmwwDJNpDnJAYGWnuaGFsw4gGXRvSYBgAYZBSAdH7QkgAAAABJRU5ErkJggg==',
+            'orange_square' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAN0lEQVQokWNgIBEwYhP8WsPwH8bmbkFVw4hLITqAaWQkRjGyJiZCitABI7GmwwDJNpDnJAYGWnuaGFsw4gGXRvSYBgAYZBSAdH7QkgAAAABJRU5ErkJggg==',
+            'orange_triangle' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAQ0lEQVQokWNgIBEwYhP8WsPwH8bmbkFVw4hLITqAaWQkRjGyJiZCitABI7GmwwDJNpDnJAYGWnuaGFsw4gGXRvSYBgAYZBSAdH7QkgAAAABJRU5ErkJggg==',
+            'orange_check'  => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAQ0lEQVQokWNgIBEwYhP8WsPwH8bmbkFVw4hLITqAaWQkRjGyJiZCitABI7GmwwDJNpDnJAYGWnuaGFsw4gGXRvSYBgAYZBSAdH7QkgAAAABJRU5ErkJggg==',
+            'orange_x'      => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAQ0lEQVQokWNgIBEwYhP8WsPwH8bmbkFVw4hLITqAaWQkRjGyJiZCitABI7GmwwDJNpDnJAYGWnuaGFsw4gGXRvSYBgAYZBSAdH7QkgAAAABJRU5ErkJggg==',
+            'orange_warning' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAQ0lEQVQokWNgIBEwYhP8WsPwH8bmbkFVw4hLITqAaWQkRjGyJiZCitABI7GmwwDJNpDnJAYGWnuaGFsw4gGXRvSYBgAYZBSAdH7QkgAAAABJRU5ErkJggg==',
+            'orange_info'   => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAQ0lEQVQokWNgIBEwYhP8WsPwH8bmbkFVw4hLITqAaWQkRjGyJiZCitABI7GmwwDJNpDnJAYGWnuaGFsw4gGXRvSYBgAYZBSAdH7QkgAAAABJRU5ErkJggg==',
+
+            // YELLOW - Amarelo (#fbc02d)
+            'yellow_dot'     => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAARElEQVQokWNgIBEwYhP8fUD3P4zN6nAZRQ0jLoXoAKaRkRjFyJqYCClCB4zEmg4DJNtAnpMYGGjtaWJswYgHXBrRYxoAFvUa9+9qaXMAAAAASUVORK5CYII=',
+            'yellow_square'  => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAARElEQVQokWNgIBEwYhP8fUD3P4zN6nAZRQ0jLoXoAKaRkRjFyJqYCClCB4zEmg4DJNtAnpMYGGjtaWJswYgHXBrRYxoAFvUa9+9qaXMAAAAASUVORK5CYII=',
+            'yellow_triangle' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAARElEQVQokWNgIBEwYhP8fUD3P4zN6nAZRQ0jLoXoAKaRkRjFyJqYCClCB4zEmg4DJNtAnpMYGGjtaWJswYgHXBrRYxoAFvUa9+9qaXMAAAAASUVORK5CYII=',
+            'yellow_check'   => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAARElEQVQokWNgIBEwYhP8fUD3P4zN6nAZRQ0jLoXoAKaRkRjFyJqYCClCB4zEmg4DJNtAnpMYGGjtaWJswYgHXBrRYxoAFvUa9+9qaXMAAAAASUVORK5CYII=',
+            'yellow_x'       => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAARElEQVQokWNgIBEwYhP8fUD3P4zN6nAZRQ0jLoXoAKaRkRjFyJqYCClCB4zEmg4DJNtAnpMYGGjtaWJswYgHXBrRYxoAFvUa9+9qaXMAAAAASUVORK5CYII=',
+            'yellow_warning' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAARElEQVQokWNgIBEwYhP8fUD3P4zN6nAZRQ0jLoXoAKaRkRjFyJqYCClCB4zEmg4DJNtAnpMYGGjtaWJswYgHXBrRYxoAFvUa9+9qaXMAAAAASUVORK5CYII=',
+            'yellow_info'    => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAARElEQVQokWNgIBEwYhP8fUD3P4zN6nAZRQ0jLoXoAKaRkRjFyJqYCClCB4zEmg4DJNtAnpMYGGjtaWJswYgHXBrRYxoAFvUa9+9qaXMAAAAASUVORK5CYII=',
+
+            // GREEN - Verde (#388e3c)
+            'green_dot'      => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAARElEQVQokWNgIBEwYhO06LP5D2OfKDqCooYRl0J0ANPISIxiZE1MhBShA0ZiTYcBkm0gz0kMDLT2NDG2YMQDLo3oMQ0AXq8aEbN9C7sAAAAASUVORK5CYII=',
+            'green_square'   => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAARElEQVQokWNgIBEwYhO06LP5D2OfKDqCooYRl0J0ANPISIxiZE1MhBShA0ZiTYcBkm0gz0kMDLT2NDG2YMQDLo3oMQ0AXq8aEbN9C7sAAAAASUVORK5CYII=',
+            'green_triangle' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAARElEQVQokWNgIBEwYhO06LP5D2OfKDqCooYRl0J0ANPISIxiZE1MhBShA0ZiTYcBkm0gz0kMDLT2NDG2YMQDLo3oMQ0AXq8aEbN9C7sAAAAASUVORK5CYII=',
+            'green_check'    => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAARElEQVQokWNgIBEwYhO06LP5D2OfKDqCooYRl0J0ANPISIxiZE1MhBShA0ZiTYcBkm0gz0kMDLT2NDG2YMQDLo3oMQ0AXq8aEbN9C7sAAAAASUVORK5CYII=',
+            'green_x'        => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAARElEQVQokWNgIBEwYhO06LP5D2OfKDqCooYRl0J0ANPISIxiZE1MhBShA0ZiTYcBkm0gz0kMDLT2NDG2YMQDLo3oMQ0AXq8aEbN9C7sAAAAASUVORK5CYII=',
+            'green_warning'  => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAARElEQVQokWNgIBEwYhO06LP5D2OfKDqCooYRl0J0ANPISIxiZE1MhBShA0ZiTYcBkm0gz0kMDLT2NDG2YMQDLo3oMQ0AXq8aEbN9C7sAAAAASUVORK5CYII=',
+            'green_info'     => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAARElEQVQokWNgIBEwYhO06LP5D2OfKDqCooYRl0J0ANPISIxiZE1MhBShA0ZiTYcBkm0gz0kMDLT2NDG2YMQDLo3oMQ0AXq8aEbN9C7sAAAAASUVORK5CYII=',
+
+            // GRAY - Cinza (#616161)
+            'gray_dot'       => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'gray_square'    => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'gray_triangle'  => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'gray_check'     => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'gray_x'         => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'gray_warning'   => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'gray_info'      => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+
+            // PURPLE - Roxo (#9c27b0)
+            'purple_dot'     => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'purple_square'  => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'purple_triangle' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'purple_check'   => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'purple_x'       => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'purple_warning' => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'purple_info'    => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+
+            // CYAN - Ciano (#00aca1)
+            'cyan_dot'       => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'cyan_square'    => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'cyan_triangle'  => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'cyan_check'     => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'cyan_x'         => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'cyan_warning'   => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'cyan_info'      => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+
+            // PINK - Rosa (#e91e63)
+            'pink_dot'       => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'pink_square'    => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'pink_triangle'  => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'pink_check'     => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'pink_x'         => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'pink_warning'   => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'pink_info'      => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+
+            // TEAL - Azul-verde (#008080)
+            'teal_dot'       => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'teal_square'    => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'teal_triangle'  => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'teal_check'     => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'teal_x'         => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'teal_warning'   => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+            'teal_info'      => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAARElEQVQokWNgYGBgYGBgYGBkZPgPxv/BwMhIyIBRUJKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkFJbIKS2AQlsQlKYhOUxCYoiU1QEpugJDZBSWyCktgEJbEJSmITlMQmKIlNUBKboCQ2QUlsgpLYBCWxCUpiE5TEJiiJTVASm6AkNkHJ/1hgYGRkYGRkYGRkZGRgYGBkYGBkYGD8D5y/efMmEwMDg8bGxgAu9w3xVdtJJgAAAABJRU5ErkJggg==',
+        ];
+        
+        // TAMANHO PADRÃO DOS ÍCONES (em pixels)
+        $iconSize = 11;
+        
+        // COMO USAR:
+        // <img src="{{ $icons['blue_dot'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Blue dot" />
+        // <img src="{{ $icons['red_warning'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Red warning" />
+        // <img src="{{ $icons['green_check'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Green check" />
+    @endphp
     {{-- ============================================================================
          HEADER: Logo + Título + Identificação Rápida
          ============================================================================ --}}
@@ -42,7 +148,10 @@
          SEÇÃO 1: IDENTIFICAÇÃO E CONTEXTO
          ============================================================================ --}}
     <div class="section">
-        <div class="section-title">ℹ️ IDENTIFICAÇÃO DO INCIDENTE</div>
+        <div class="section-title">
+            <img src="{{ $icons['blue_info'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Info" />
+            IDENTIFICAÇÃO DO INCIDENTE
+        </div>
         
         <table style="width: 100%; margin: 0;">
             <tr>
@@ -78,7 +187,10 @@
          SEÇÃO 2: CLASSIFICAÇÃO E SEVERIDADE
          ============================================================================ --}}
     <div class="section">
-        <div class="section-title">⚠️ CLASSIFICAÇÃO E SEVERIDADE</div>
+        <div class="section-title">
+            <img src="{{ $icons['orange_warning'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Alerta" />
+            CLASSIFICAÇÃO E SEVERIDADE
+        </div>
         
         <table style="width: 100%;">
             <tr style="background-color: #f9f9f9;">
@@ -112,7 +224,10 @@
          SEÇÃO 3: IMPACTO E SLA
          ============================================================================ --}}
     <div class="section">
-        <div class="section-title">📊 IMPACTO AO USUÁRIO</div>
+        <div class="section-title">
+            <img src="{{ $icons['blue_info'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Impacto" />
+            IMPACTO AO USUÁRIO
+        </div>
         
         <div class="box">
             <div style="margin-bottom: 10px;">
@@ -140,7 +255,10 @@
          SEÇÃO 4: LINHA DO TEMPO
          ============================================================================ --}}
     <div class="section">
-        <div class="section-title">⟶ LINHA DO TEMPO DO INCIDENTE</div>
+        <div class="section-title">
+            <img src="{{ $icons['gray'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Timeline" />
+            LINHA DO TEMPO DO INCIDENTE
+        </div>
         
         <table style="width: 100%;">
             <tr style="background-color: #f9f9f9;">
@@ -149,7 +267,8 @@
             </tr>
             <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">
-                    🔴 Início
+                    <img src="{{ $icons['red'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Início" />
+                    Início
                 </td>
                 <td style="padding: 10px; border-bottom: 1px solid #eee;">
                     {{ $timestamp['started_at'] }}
@@ -157,7 +276,8 @@
             </tr>
             <tr style="background-color: #fffbf0;">
                 <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">
-                    🟠 Detecção
+                    <img src="{{ $icons['orange'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Detecção" />
+                    Detecção
                 </td>
                 <td style="padding: 10px; border-bottom: 1px solid #eee;">
                     {{ $timestamp['detected_at'] }}
@@ -165,7 +285,17 @@
             </tr>
             <tr>
                 <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">
-                    🟢 Serviço Restaurado
+                    <img src="{{ $icons['yellow'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Classificação" />
+                    Classificação
+                </td>
+                <td style="padding: 10px; border-bottom: 1px solid #eee;">
+                    {{ $timestamp['classificated_at'] }}
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">
+                    <img src="{{ $icons['green'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Restaurado" />
+                    Serviço Restaurado
                 </td>
                 <td style="padding: 10px; border-bottom: 1px solid #eee;">
                     {{ $timestamp['restored_at'] }}
@@ -173,10 +303,11 @@
             </tr>
             <tr style="background-color: #f0f8f4;">
                 <td style="padding: 10px; font-weight: bold;">
-                    ✅ Encerramento
+                    <img src="{{ $icons['green'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Encerramento" />
+                    Encerramento
                 </td>
                 <td style="padding: 10px;">
-                    {{ $timestamp['resolved_at'] }}
+                    {{ $timestamp['closed_at'] }}
                 </td>
             </tr>
         </table>
@@ -186,7 +317,10 @@
          SEÇÃO 5: MÉTRICAS SRE
          ============================================================================ --}}
     <div class="section">
-        <div class="section-title">≡ MÉTRICAS SRE (Site Reliability Engineering)</div>
+        <div class="section-title">
+            <img src="{{ $icons['gray'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Métricas" />
+            MÉTRICAS SRE (Site Reliability Engineering)
+        </div>
         
         <table style="width: 100%;">
             <tr style="background-color: #f9f9f9;">
@@ -194,7 +328,7 @@
                 <th style="text-align: center; padding: 10px; width: 25%;">Tempo</th>
                 <th style="text-align: left; padding: 10px;">Descrição</th>
             </tr>
-            @foreach(['ttd' => 'TTD', 'ttr' => 'TTR', 'ttrad' => 'TTRAD', 'ttc' => 'TTC'] as $key => $abbr)
+            @foreach(['ttd' => 'TTD', 'ttcy' => 'TTCY', 'ttr' => 'TTR', 'ttrad' => 'TTRAD', 'ttc' => 'TTC'] as $key => $abbr)
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">
                         {{ $metrics[$key]['label'] }}
@@ -210,7 +344,7 @@
         </table>
 
         <div style="margin-top: 10px; padding: 10px; background-color: #e3f2fd; border-left: 4px solid #1976d2; font-size: 9pt; color: #1565c0;">
-            <strong>Interpretação:</strong> Métricas menores indicam resposta mais rápida a incidentes. TTD < 5min e TTR < 30min são ideais em produção.
+            <strong>Interpretação:</strong> Métricas menores indicam resposta mais rápida. TTD e TTCY medem velocidade de detecção/classificação; TTR e TTRAD medem restauração; TTC mede o ciclo total até o encerramento.
         </div>
     </div>
 
@@ -218,7 +352,10 @@
          SEÇÃO 6: CAUSA RAIZ
          ============================================================================ --}}
     <div class="section">
-        <div class="section-title">🔍 ANÁLISE DE CAUSA RAIZ</div>
+        <div class="section-title">
+            <img src="{{ $icons['blue'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Causa raiz" />
+            ANÁLISE DE CAUSA RAIZ
+        </div>
         
         <div class="box">
             {{ $root_cause }}
@@ -229,21 +366,33 @@
          SEÇÃO 7: REMEDIAÇÃO (3 Camadas)
          ============================================================================ --}}
     <div class="section">
-        <div class="section-title">🛠️ PLANO DE REMEDIAÇÃO</div>
+        <div class="section-title">
+            <img src="{{ $icons['orange'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Remediação" />
+            PLANO DE REMEDIAÇÃO
+        </div>
         
         <div style="margin-bottom: 12px;">
             <div style="background-color: #fff3e0; border-left: 4px solid #f57c00; padding: 10px; margin-bottom: 10px;">
-                <div style="font-weight: bold; color: #e65100; margin-bottom: 5px;">⚡ IMEDIATO (Executado)</div>
+                <div style="font-weight: bold; color: #e65100; margin-bottom: 5px;">
+                    <img src="{{ $icons['orange'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Imediato" />
+                    IMEDIATO (Executado)
+                </div>
                 <div style="color: #333; font-size: 10pt;">{{ $remediation['immediate'] }}</div>
             </div>
             
             <div style="background-color: #e3f2fd; border-left: 4px solid #1976d2; padding: 10px; margin-bottom: 10px;">
-                <div style="font-weight: bold; color: #1565c0; margin-bottom: 5px;">📋 CURTO PRAZO (1-2 semanas)</div>
+                <div style="font-weight: bold; color: #1565c0; margin-bottom: 5px;">
+                    <img src="{{ $icons['blue'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Curto prazo" />
+                    CURTO PRAZO (1-2 semanas)
+                </div>
                 <div style="color: #333; font-size: 10pt;">{{ $remediation['short_term'] }}</div>
             </div>
             
             <div style="background-color: #f3e5f5; border-left: 4px solid #7b1fa2; padding: 10px;">
-                <div style="font-weight: bold; color: #6a1b9a; margin-bottom: 5px;">🎯 LONGO PRAZO (1+ mês)</div>
+                <div style="font-weight: bold; color: #6a1b9a; margin-bottom: 5px;">
+                    <img src="{{ $icons['gray'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Longo prazo" />
+                    LONGO PRAZO (1+ mês)
+                </div>
                 <div style="color: #333; font-size: 10pt;">{{ $remediation['long_term'] }}</div>
             </div>
         </div>
@@ -271,14 +420,18 @@
          ========================================================================== --}}
     @if($incident['artifacts_dir'])
         <div class="section">
-            <div class="section-title">📁 ARTEFATOS E DOCUMENTAÇÃO</div>
+            <div class="section-title">
+                <img src="{{ $icons['gray'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Artefatos" />
+                ARTEFATOS E DOCUMENTAÇÃO
+            </div>
             
             <div style="background-color: #fafafa; border: 1px solid #ddd; padding: 10px; font-family: monospace; font-size: 9pt; word-break: break-all;">
                 {{ $incident['artifacts_dir'] }}
             </div>
             
             <div style="margin-top: 8px; font-size: 9pt; color: #666;">
-                📌 Arquivo de logs, screenshots e documentação adicional disponíveis no diretório acima.
+                <img src="{{ $icons['gray'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Nota" />
+                Arquivo de logs, screenshots e documentação adicional disponíveis no diretório acima.
             </div>
         </div>
     @endif

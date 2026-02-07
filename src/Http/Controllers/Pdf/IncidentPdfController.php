@@ -4,6 +4,7 @@ namespace MatheusFS\Laravel\Insights\Http\Controllers\Pdf;
 
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use MatheusFS\Laravel\Insights\Http\Controllers\Controller;
 use MatheusFS\Laravel\Insights\Services\Pdf\IncidentPdfGeneratorV2;
 
@@ -28,10 +29,22 @@ class IncidentPdfController extends Controller
         $incident = $this->findIncident($incidentId);
 
         if (! $incident) {
+            Log::info('Incident PDF download: incidente não encontrado', [
+                'incident_id' => $incidentId,
+            ]);
             abort(404, "Incidente {$incidentId} não encontrado");
         }
 
-        return $this->incidentPdfGenerator->generateReceipt($incident, download: true);
+        try {
+            return $this->incidentPdfGenerator->generateReceipt($incident, download: true);
+        } catch (\Throwable $exception) {
+            Log::error('Incident PDF download: falha ao gerar PDF', [
+                'incident_id' => $incidentId,
+                'exception' => $exception->getMessage(),
+            ]);
+
+            abort(500, 'Erro ao gerar PDF do incidente');
+        }
     }
 
     /**
@@ -44,10 +57,22 @@ class IncidentPdfController extends Controller
         $incident = $this->findIncident($incidentId);
 
         if (! $incident) {
+            Log::info('Incident PDF preview: incidente não encontrado', [
+                'incident_id' => $incidentId,
+            ]);
             abort(404, "Incidente {$incidentId} não encontrado");
         }
 
-        return $this->incidentPdfGenerator->generateReceipt($incident, download: false);
+        try {
+            return $this->incidentPdfGenerator->generateReceipt($incident, download: false);
+        } catch (\Throwable $exception) {
+            Log::error('Incident PDF preview: falha ao gerar PDF', [
+                'incident_id' => $incidentId,
+                'exception' => $exception->getMessage(),
+            ]);
+
+            abort(500, 'Erro ao gerar PDF do incidente');
+        }
     }
 
     /**
@@ -59,9 +84,14 @@ class IncidentPdfController extends Controller
     protected function findIncident(string $incidentId): ?array
     {
         $incidentsPath = config('insights.incidents_path');
-        $jsonPath = $incidentsPath ? rtrim($incidentsPath, '/').'/incidents.json' : null;
+        $jsonPath = $this->resolveIncidentsJsonPath($incidentsPath);
 
         if (! $jsonPath || ! File::exists($jsonPath)) {
+            Log::error('Incident PDF: arquivo de incidentes não encontrado', [
+                'incident_id' => $incidentId,
+                'incidents_path' => $incidentsPath,
+                'json_path' => $jsonPath,
+            ]);
             abort(500, 'Arquivo de incidentes não encontrado');
         }
 
@@ -69,6 +99,11 @@ class IncidentPdfController extends Controller
         $data = json_decode($jsonContent, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
+            Log::error('Incident PDF: erro ao decodificar JSON', [
+                'incident_id' => $incidentId,
+                'json_path' => $jsonPath,
+                'json_error' => json_last_error_msg(),
+            ]);
             abort(500, 'Erro ao decodificar JSON de incidentes');
         }
 
@@ -81,5 +116,32 @@ class IncidentPdfController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * Resolve o caminho do incidents.json consolidado.
+     *
+     * Regras:
+     * - Se INSIGHTS_INCIDENTS_PATH apontar para arquivo .json, usar direto.
+     * - Se apontar para diretório .../incidents, usar o parent + /incidents.json.
+     * - Caso contrário, usar {path}/incidents.json.
+     */
+    protected function resolveIncidentsJsonPath(?string $incidentsPath): ?string
+    {
+        if (! $incidentsPath) {
+            return null;
+        }
+
+        $normalized = rtrim($incidentsPath, '/');
+
+        if (str_ends_with($normalized, '.json')) {
+            return $normalized;
+        }
+
+        if (basename($normalized) === 'incidents') {
+            return dirname($normalized).'/incidents.json';
+        }
+
+        return $normalized.'/incidents.json';
     }
 }

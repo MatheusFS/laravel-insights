@@ -24,8 +24,10 @@
             
             <div class="alert">
                 <strong>🔧 Incidente {{ $incident['incident_id'] }}</strong><br>
-                <strong>Período:</strong> {{ $incident['detected_at'] }} - {{ $incident['resolved_at'] }}<br>
-                <strong>Duração:</strong> {{ $incident['duration'] }}<br>
+                <strong>Detecção:</strong> {{ $incident['detected_at'] }}<br>
+                <strong>Restauração:</strong> {{ $incident['restored_at'] ?? $incident['closed_at'] }}<br>
+                <strong>Encerramento:</strong> {{ $incident['closed_at'] }}<br>
+                <strong>Duração total (TTC):</strong> {{ $incident['duration'] }}<br>
                 <strong>Status:</strong> {{ $incident['status'] }}
             </div>
             
@@ -45,7 +47,7 @@
             
             <h3>O problema foi resolvido?</h3>
             <p>
-                Sim! O incidente foi totalmente resolvido em {{ $incident['resolved_at'] }}. 
+                Sim! O serviço foi restaurado em {{ $incident['restored_at'] ?? $incident['closed_at'] }} e o incidente foi encerrado em {{ $incident['closed_at'] }}. 
                 Implementamos medidas preventivas para evitar ocorrências similares:
             </p>
             <ul>

@@ -4,6 +4,7 @@ namespace MatheusFS\Laravel\Insights\Services\Pdf;
 
 use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\File;
 
 /**
  * Incident PDF Generator (V2)
@@ -62,6 +63,9 @@ class IncidentPdfGeneratorV2
         $classification = $incident['classification'] ?? [];
         $impact = $incident['impact'] ?? [];
         $remediation = $incident['remediation'] ?? [];
+        
+        // Load affected users from separate JSON file
+        $affectedUsersCount = $this->loadAffectedUsersCount($incident['id'] ?? 'unknown');
 
         // Parse timestamps with timezone handling (UTC → São Paulo)
         $started = isset($timestamp['started_at'])
@@ -70,22 +74,26 @@ class IncidentPdfGeneratorV2
         $detected = isset($timestamp['detected_at'])
             ? Carbon::parse($timestamp['detected_at'], 'UTC')->setTimezone('America/Sao_Paulo')
             : null;
+        $classificated = isset($timestamp['classificated_at'])
+            ? Carbon::parse($timestamp['classificated_at'], 'UTC')->setTimezone('America/Sao_Paulo')
+            : null;
         $restored = isset($timestamp['restored_at'])
             ? Carbon::parse($timestamp['restored_at'], 'UTC')->setTimezone('America/Sao_Paulo')
             : null;
-        $resolved = isset($timestamp['resolved_at'])
-            ? Carbon::parse($timestamp['resolved_at'], 'UTC')->setTimezone('America/Sao_Paulo')
+        $resolved = isset($timestamp['closed_at'])
+            ? Carbon::parse($timestamp['closed_at'], 'UTC')->setTimezone('America/Sao_Paulo')
             : null;
 
         // Calculate SRE metrics in minutes
-        $metrics = $this->calculateMetrics($started, $detected, $restored, $resolved);
+        $metrics = $this->calculateMetrics($started, $detected, $classificated, $restored, $resolved);
 
         // Format dates for PT-BR display
         $timelineFormatted = [
             'started_at' => $started ? $this->formatDateTime($started) : 'Não registrado',
             'detected_at' => $detected ? $this->formatDateTime($detected) : 'Não registrado',
+            'classificated_at' => $classificated ? $this->formatDateTime($classificated) : 'Não registrado',
             'restored_at' => $restored ? $this->formatDateTime($restored) : 'Não registrado',
-            'resolved_at' => $resolved ? $this->formatDateTime($resolved) : 'Não registrado',
+            'closed_at' => $resolved ? $this->formatDateTime($resolved) : 'Não registrado',
         ];
 
         // Get severity color class
@@ -113,7 +121,7 @@ class IncidentPdfGeneratorV2
             ],
             'impact' => [
                 'description' => $impact['description'] ?? 'Não descrito',
-                'users_affected' => $impact['users_affected'] ?? 0,
+                'users_affected' => $affectedUsersCount,
                 'sla_breached' => $slaBreached,
                 'sla_status' => $slaBreached ? 'SLA VIOLADO' : 'Dentro do SLA',
                 'sla_class' => $slaBreached ? 'badge-critical' : 'badge-low',
@@ -140,9 +148,16 @@ class IncidentPdfGeneratorV2
      * @param Carbon|null $resolved Encerramento do incidente
      * @return array<string, mixed> Metrics with formatted strings
      */
-    protected function calculateMetrics(?Carbon $started, ?Carbon $detected, ?Carbon $restored, ?Carbon $resolved): array
+    protected function calculateMetrics(
+        ?Carbon $started,
+        ?Carbon $detected,
+        ?Carbon $classificated,
+        ?Carbon $restored,
+        ?Carbon $resolved
+    ): array
     {
         $ttd = null;
+        $ttcy = null;
         $ttr = null;
         $ttrad = null;
         $ttc = null;
@@ -151,12 +166,16 @@ class IncidentPdfGeneratorV2
             $ttd = $started->diffInMinutes($detected);
         }
 
-        if ($detected && $restored) {
-            $ttr = $detected->diffInMinutes($restored);
+        if ($detected && $classificated) {
+            $ttcy = $detected->diffInMinutes($classificated);
         }
 
-        if ($detected && $resolved) {
-            $ttrad = $detected->diffInMinutes($resolved);
+        if ($started && $restored) {
+            $ttr = $started->diffInMinutes($restored);
+        }
+
+        if ($detected && $restored) {
+            $ttrad = $detected->diffInMinutes($restored);
         }
 
         if ($started && $resolved) {
@@ -170,23 +189,29 @@ class IncidentPdfGeneratorV2
                 'label' => 'TTD (Time To Detect)',
                 'description' => 'Tempo desde o início até a detecção',
             ],
+            'ttcy' => [
+                'minutes' => $ttcy,
+                'formatted' => $this->formatDuration($ttcy),
+                'label' => 'TTCY (Time To Classify)',
+                'description' => 'Tempo desde a detecção até a classificação',
+            ],
             'ttr' => [
                 'minutes' => $ttr,
                 'formatted' => $this->formatDuration($ttr),
                 'label' => 'TTR (Time To Restore)',
-                'description' => 'Tempo desde detecção até restauração',
+                'description' => 'Tempo desde o início até a restauração',
             ],
             'ttrad' => [
                 'minutes' => $ttrad,
                 'formatted' => $this->formatDuration($ttrad),
-                'label' => 'TTRAD (Time To Resolution And Document)',
-                'description' => 'Tempo desde detecção até resolução',
+                'label' => 'TTRAD (Time To Restore After Detection)',
+                'description' => 'Tempo desde a detecção até a restauração',
             ],
             'ttc' => [
                 'minutes' => $ttc,
                 'formatted' => $this->formatDuration($ttc),
-                'label' => 'TTC (Total Time Cycle)',
-                'description' => 'Tempo total desde o início até resolução',
+                'label' => 'TTC (Total To Close)',
+                'description' => 'Tempo total desde o início até o encerramento',
             ],
         ];
     }
@@ -269,5 +294,30 @@ class IncidentPdfGeneratorV2
             'resolved' => 'Resolvido',
             default => 'Não definido',
         };
+    }
+
+    /**
+     * Load affected users count from separate JSON file
+     *
+     * @param string $incidentId Incident ID (e.g., "INC-2026-001")
+     * @param string|null $basePath Base path to incidents directory
+     * @return int Total count of affected users
+     */
+    protected function loadAffectedUsersCount(string $incidentId, ?string $basePath = null): int
+    {
+        $basePath = $basePath ?? config('insights.incidents_path');
+        $affectedUsersPath = $basePath ? rtrim($basePath, '/') . '/' . $incidentId . '/affected_users.json' : null;
+
+        if (! $affectedUsersPath || ! File::exists($affectedUsersPath)) {
+            return 0;
+        }
+
+        try {
+            $content = File::get($affectedUsersPath);
+            $data = json_decode($content, true);
+            return $data['total'] ?? 0;
+        } catch (\Exception) {
+            return 0;
+        }
     }
 }

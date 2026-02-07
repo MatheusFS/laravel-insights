@@ -71,8 +71,8 @@ class PdfGenerator
         // Set DomPDF options (UTF-8 safe fonts, rendering settings)
         $pdf->setOptions([
             'isHtml5ParserEnabled' => true,
-            'isRemoteEnabled' => false, // Security: disable remote resources
-            'defaultFont' => 'DejaVu Sans', // UTF-8 safe font with emoji support
+            'isRemoteEnabled' => true, // Allow data URIs and local assets for PNG rendering
+            'defaultFont' => 'DejaVu Sans',
             'dpi' => $options['dpi'] ?? 96,
             'defaultMediaType' => 'print',
             'isFontSubsettingEnabled' => true,

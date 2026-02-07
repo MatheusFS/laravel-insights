@@ -617,9 +617,7 @@ class S3LogDownloaderService
     private function loadIncident(string $incidentId): array
     {
         $incidentsPath = config('insights.incidents_path', storage_path('insights/reliability/incidents'));
-        // O arquivo consolidado está no diretório parent: storage/insights/reliability/incidents.json
-        $parentPath = dirname($incidentsPath);
-        $incidentsFile = $parentPath . '/incidents.json';
+        $incidentsFile = $this->resolveIncidentsJsonPath($incidentsPath);
 
         if (!File::exists($incidentsFile)) {
             throw new \Exception("Incidents file not found: {$incidentsFile}");
@@ -657,6 +655,33 @@ class S3LogDownloaderService
         }
 
         return $incidentData;
+    }
+
+    /**
+     * Resolve o caminho do incidents.json consolidado.
+     *
+     * Regras:
+     * - Se INSIGHTS_INCIDENTS_PATH apontar para arquivo .json, usar direto.
+     * - Se apontar para diretório .../incidents, usar o parent + /incidents.json.
+     * - Caso contrário, usar {path}/incidents.json.
+     */
+    private function resolveIncidentsJsonPath(?string $incidentsPath): ?string
+    {
+        if (! $incidentsPath) {
+            return null;
+        }
+
+        $normalized = rtrim($incidentsPath, '/');
+
+        if (str_ends_with($normalized, '.json')) {
+            return $normalized;
+        }
+
+        if (basename($normalized) === 'incidents') {
+            return dirname($normalized).'/incidents.json';
+        }
+
+        return $normalized.'/incidents.json';
     }
 
     /**

@@ -14,7 +14,7 @@
 				"detected_at": "2026-02-03T10:50:00Z",
 				"classificated_at": "2026-02-03T11:00:00Z",
 				"restored_at": "2026-02-03T12:50:00Z",
-				"resolved_at": "2026-02-03T21:00:00Z"
+				"closed_at": "2026-02-03T21:00:00Z"
 			},
 			"classification": {
 				"error_type": "5xx",
@@ -24,8 +24,7 @@
 				"metric_unit": "%"
 			},
 			"impact": {
-				"description": "OOM em EC2 t3.small causando 502 Bad Gateway intermitente",
-				"users_affected": 36
+				"description": "OOM em EC2 t3.small causando 502 Bad Gateway intermitente"
 			},
 			"root_cause": "Configuração inadequada PHP-FPM para hardware limitado (t3.small)",
 			"remediation": {
