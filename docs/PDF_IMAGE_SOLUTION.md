@@ -15,21 +15,29 @@ Quando `laravel-insights` é instalado via Composer no projeto `core`, o DOMPDF 
 ### 1. Novos Métodos PDF-Optimized (laravel-insights)
 
 ```php
-// LogoPath
-LogoPath::getPdfUri()  // Retorna data:image/png;base64,... (em vez de file:///)
+// LogoPath - Suporta 3 variantes
+LogoPath::getPdfUri()           // Ícone (default)
+LogoPath::getPdfUri('light')    // Logo para fundo claro
+LogoPath::getPdfUri('dark')     // Logo para fundo escuro
+
+// Shorthands
+LogoPath::getPdfUriLight()      // Logo fundo claro
+LogoPath::getPdfUriDark()       // Logo fundo escuro
 
 // EmojiPath  
-EmojiPath::getPdfUri('2139')  // Retorna data:image/png;base64,...
-EmojiPath::getPdfIconArray()  // Array com 5 icons em base64
+EmojiPath::getPdfUri('2139')    // Emoji específico em base64
+EmojiPath::getPdfIconArray()    // Array com 5 icons em base64
 ```
 
 ### 2. Compatibilidade Mantida
 
 ```php
-// Para uso WEB (continua funcionando)
-LogoPath::getUri()       // file:///path/to/logo.png
-EmojiPath::getUri('2139') // file:///path/to/emoji.png
-EmojiPath::getIconArray() // Array com file:// URIs
+// Para uso WEB (continua funcionando com file://)
+LogoPath::getUri()              // file:// ícone
+LogoPath::getUri('light')       // file:// logo claro
+LogoPath::getUri('dark')        // file:// logo escuro
+EmojiPath::getUri('2139')       // file:// emoji
+EmojiPath::getIconArray()       // Array com file:// URIs
 ```
 
 ### 3. Uso no PDF Generator
@@ -47,8 +55,9 @@ EmojiPath::getIconArray() // Array com file:// URIs
 ### Antes
 - PDF: 1.618 bytes (vazio, 0 páginas)
 - Erro: DOMPDF não acessava imagens via file://
-
-### Depois
+758 KB (4 páginas com 3 logos + 5 emojis)
+- ✅ Todas as imagens renderizando corretamente
+- ✅ 3 variantes de logo disponíveis (icon, light, dark)
 - PDF: 327 KB (2 páginas com logo + 5 emojis)
 - ✅ Todas as imagens renderizando corretamente
 - ✅ Base64 inline (sem dependência de file://)
@@ -67,7 +76,9 @@ EmojiPath::getIconArray() // Array com file:// URIs
 
 ## Commits
 
-1. **laravel-insights**: `76415b6` - feat: add PDF-optimized helpers using base64 data URIs
+1. **laravel-insights**: 
+   - `76415b6` - feat: add PDF-optimized helpers using base64 data URIs
+   - `10248c3` - feat: add support for multiple logo variants
 2. **core**: `a1c1cf14c` - change(infra): adjust DOMPDF chroot for vendor access
 
 ## Performance
@@ -77,9 +88,11 @@ EmojiPath::getIconArray() // Array com file:// URIs
 - File: ~360KB por imagem (referência externa)
 - Trade-off: +33% tamanho HTML, mas 100% compatibilidade
 
-**PDF Final**
-- Logo (1x): 360KB
-- Emojis (5x): ~72KB cada (Twemoji 72x72px)
+**PDF Fícone: 352KB (icone_regular.png)
+- Logo claro: 226KB (logo_fundo_claro.png)
+- Logo escuro: 217KB (logo_fundo_escuro.png)
+- Emojis (5x): ~5-10KB cada (Twemoji 72x72px)
+- Total exemplo: ~758KB (3 logos + 5 emoji
 - Total: ~327KB (aceitável para PDFs de incidentes)
 
 ## Considerações
@@ -97,14 +110,15 @@ EmojiPath::getIconArray() // Array com file:// URIs
 ❌ **Publicar assets** - Requer `php artisan vendor:publish` (extra step)  
 ❌ **Absolute paths** - Quebra em ambientes diferentes  
 ✅ **Base64 inline** - Portável e garantido
-
-## Testes Validados
-
-```bash
-# Teste completo
-docker exec core-fpm-1 php test-optimized.php
+ com todos os logos
+docker exec core-fpm-1 php test-all-logos.php
 
 # Output esperado:
+# Testing variant: icon   ✅ 480370 bytes
+# Testing variant: light  ✅ 307274 bytes  
+# Testing variant: dark   ✅ 295070 bytes
+# ✅ PDF generated: 758.02 KB (776213 bytes)
+# 🎉 SUCCESS: PDF has all 3 logos + emoji
 # ✅ LogoPath::getPdfUri() length: 480370
 # ✅ EmojiPath::getPdfIconArray() count: 5
 # ✅ PDF generated: 327.55 KB (335411 bytes)
@@ -115,8 +129,25 @@ docker exec core-fpm-1 php test-optimized.php
 
 ### Para outros pacotes Composer com PDFs
 
-Se você tem um pacote que gera PDFs com imagens:
+Se Suporte variantes se necessário (light/dark/sizes)
+3. Use nos templates: `<img src="{{ Helper::getPdfUri() }}">`
+4. Teste com pacote instalado via Composer (não symlink local)
 
+### Exemplo de uso em templates Blade
+
+```blade
+{{-- Logo para fundo branco (documentos, PDFs) --}}
+<img src="{{ \MatheusFS\Laravel\Insights\Helpers\LogoPath::getPdfUriLight() }}" alt="Logo">
+
+{{-- Logo para dark mode --}}
+<img src="{{ \MatheusFS\Laravel\Insights\Helpers\LogoPath::getPdfUriDark() }}" alt="Logo">
+
+{{-- Emojis --}}
+@php
+    $icons = \MatheusFS\Laravel\Insights\Helpers\EmojiPath::getPdfIconArray();
+@endphp
+<img src="{{ $icons['2139'] }}" alt="Info">
+```
 1. Adicione método `getPdfUri()` que retorna base64
 2. Use nos templates: `<img src="{{ Helper::getPdfUri() }}">`
 3. Teste com pacote instalado via Composer (não symlink local)
