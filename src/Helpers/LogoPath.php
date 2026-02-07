@@ -7,10 +7,13 @@ use Illuminate\Support\Facades\File;
 /**
  * Logo Path Helper
  * 
- * Centraliza o uso do logo da Continuo Tecnologia em todo o projeto.
+ * Centraliza o uso dos logos da Continuo Tecnologia em todo o projeto.
  * Garante uso consistente de caminhos absolutos e compatibilidade com DOMPDF.
  * 
- * Logo oficial: assets/icone_regular.png
+ * Logos disponíveis:
+ * - icone_regular.png (ícone apenas)
+ * - logo_fundo_claro.png (logo completo para fundos claros)
+ * - logo_fundo_escuro.png (logo completo para fundos escuros)
  */
 class LogoPath
 {
@@ -27,11 +30,12 @@ class LogoPath
     /**
      * Get path with file:// protocol (ideal for DOMPDF)
      * 
+     * @param string $variant Logo variant: 'icon', 'light', 'dark'
      * @return string file:// URI to logo (absolute path with 3 slashes: file:///path)
      */
-    public static function getUri(): string
+    public static function getUri(string $variant = 'icon'): string
     {
-        $path = self::getPath();
+        $path = self::getPath($variant);
         // Ensure absolute path and use 3 slashes for file:// (file:///path/to/file)
         return 'file://' . (strpos($path, '/') === 0 ? '' : '/') . $path;
     }
@@ -39,12 +43,15 @@ class LogoPath
     /**
      * Get absolute filesystem path
      * 
+     * @param string $variant Logo variant: 'icon', 'light', 'dark'
      * @return string Absolute path to logo
      */
-    public static function getPath(): string
+    public static function getPath(string $variant = 'icon'): string
     {
+        $filename = self::getFilename($variant);
+        
         // Try package assets first
-        $packagePath = realpath(__DIR__ . '/../../resources/assets/icone_regular.png');
+        $packagePath = realpath(__DIR__ . '/../../resources/assets/' . $filename);
         if ($packagePath && file_exists($packagePath)) {
             return $packagePath;
         }
@@ -60,7 +67,23 @@ class LogoPath
         }
 
         // Last resort: return the original path (may not exist)
-        return __DIR__ . '/../../resources/assets/icone_regular.png';
+        return __DIR__ . '/../../resources/assets/' . $filename;
+    }
+
+    /**
+     * Get filename for logo variant
+     * 
+     * @param string $variant 'icon', 'light', 'dark'
+     * @return string Filename
+     */
+    protected static function getFilename(string $variant): string
+    {
+        return match($variant) {
+            'light' => 'logo_fundo_claro.png',
+            'dark' => 'logo_fundo_escuro.png',
+            'icon' => 'icone_regular.png',
+            default => 'icone_regular.png',
+        };
     }
 
     /**
@@ -78,11 +101,12 @@ class LogoPath
      * 
      * Útil para casos onde file:// não é suportado.
      * 
+     * @param string $variant Logo variant: 'icon', 'light', 'dark'
      * @return string data:image/png;base64,...
      */
-    public static function getBase64(): string
+    public static function getBase64(string $variant = 'icon'): string
     {
-        $path = self::getPath();
+        $path = self::getPath($variant);
         
         if (!file_exists($path)) {
             return '';
@@ -98,21 +122,43 @@ class LogoPath
      * DOMPDF has issues with file:// protocol across symlinks,
      * so we return base64 data URI by default for PDFs.
      * 
+     * @param string $variant Logo variant: 'icon', 'light', 'dark'
      * @return string data:image/png;base64,...
      */
-    public static function getPdfUri(): string
+    public static function getPdfUri(string $variant = 'icon'): string
     {
-        return self::getBase64();
+        return self::getBase64($variant);
+    }
+
+    /**
+     * Get logo for light background (shorthand)
+     * 
+     * @return string data:image/png;base64,...
+     */
+    public static function getPdfUriLight(): string
+    {
+        return self::getPdfUri('light');
+    }
+
+    /**
+     * Get logo for dark background (shorthand)
+     * 
+     * @return string data:image/png;base64,...
+     */
+    public static function getPdfUriDark(): string
+    {
+        return self::getPdfUri('dark');
     }
 
     /**
      * Get logo dimensions
      * 
+     * @param string $variant Logo variant: 'icon', 'light', 'dark'
      * @return array|null ['width' => int, 'height' => int] or null if not found
      */
-    public static function dimensions(): ?array
+    public static function dimensions(string $variant = 'icon'): ?array
     {
-        $path = self::getPath();
+        $path = self::getPath($variant);
         
         if (!file_exists($path)) {
             return null;
