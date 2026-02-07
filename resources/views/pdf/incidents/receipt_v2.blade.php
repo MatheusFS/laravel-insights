@@ -23,7 +23,7 @@
         use MatheusFS\Laravel\Insights\Helpers\EmojiPath;
         
         $icons = $icons ?? [];
-        $iconSize = 11;
+        $iconSize = 14;
     @endphp
     
     {{-- ============================================================================
@@ -39,17 +39,16 @@
                          - URI: base64 data URI (compatível DOMPDF 3.x)
                          ============================================================================ --}}
                     @php
-                        $logoUri = LogoPath::exists() ? LogoPath::getPdfUriLight() : '';
+                        $logoUri = LogoPath::exists() ? LogoPath::getPdfUri() : '';
                     @endphp
                     @if($logoUri)
-                        <img src="{{ $logoUri }}" alt="Logo Continuo Tecnologia" style="width: 70px; height: auto;" />
+                        <img src="{{ $logoUri }}" alt="Logo Continuo Tecnologia" style="width: 96px; height: auto;" />
                     @else
-                        <div style="width: 70px; height: 70px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #999;">CT</div>
+                        <div style="width: 96px; height: 96px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #999;">CT</div>
                     @endif
                 </td>
                 <td style="padding-left: 15px; vertical-align: middle;">
                     <h1 style="margin: 0; font-size: 24px; font-weight: bold; color: #1976d2;">Comprovante de Incidente</h1>
-                    <p style="margin: 3px 0; font-size: 11px; color: #666;">{{ $company ?? 'Continuo Tecnologia' }}</p>
                     <p style="margin: 3px 0; font-size: 10px; color: #999;">{{ $generated_at ?? 'Data não disponível' }}</p>
                 </td>
                 <td style="text-align: right; vertical-align: middle;">
