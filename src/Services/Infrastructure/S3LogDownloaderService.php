@@ -207,6 +207,8 @@ class S3LogDownloaderService
 
             $count = 0;
             $totalObjects = 0;
+            $matchedGz = 0;
+            $sampleKeys = [];
             $continuationToken = null;
 
             // Usar paginação para listar objetos rapidamente
@@ -232,8 +234,12 @@ class S3LogDownloaderService
                 // Processar objetos desta página
                 foreach ($result['Contents'] as $object) {
                     $key = $object['Key'];
+                    if (count($sampleKeys) < 3) {
+                        $sampleKeys[] = $key;
+                    }
                     
-                    if (str_ends_with($key, '.log.gz')) {
+                    if (str_ends_with($key, '.log.gz') || str_ends_with($key, '.gz')) {
+                        $matchedGz++;
                         $filename = basename($key);
                         
                         // FILTRO POR TIMESTAMP: Extrair timestamp do nome do arquivo
@@ -285,8 +291,16 @@ class S3LogDownloaderService
 
             \Log::info("Found objects in S3", [
                 'total_objects' => $totalObjects,
-                'log_gz_files' => $count,
+                'matched_gz_files' => $matchedGz,
+                'downloaded_gz_files' => $count,
             ]);
+
+            if ($totalObjects > 0 && $matchedGz === 0) {
+                \Log::warning("No .gz log files matched in S3 prefix", [
+                    'prefix' => $s3Path,
+                    'sample_keys' => $sampleKeys,
+                ]);
+            }
 
             return $count;
         } catch (\Exception $e) {
@@ -577,5 +591,19 @@ class S3LogDownloaderService
             'extracted' => glob($this->localBasePath . '/*.log') ?: [],
             'compressed' => glob($this->localBasePath . '/*.gz') ?: [],
         ];
+    }
+
+    /**
+     * Lista arquivos .log extraídos no diretório unificado
+     * 
+     * @return array Lista de caminhos absolutos para arquivos .log
+     */
+    public function listExtractedLogs(): array
+    {
+        if (!File::isDirectory($this->localBasePath)) {
+            return [];
+        }
+
+        return glob($this->localBasePath . '/*.log') ?: [];
     }
 }

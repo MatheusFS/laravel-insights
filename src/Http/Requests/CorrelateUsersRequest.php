@@ -22,6 +22,7 @@ class CorrelateUsersRequest extends FormRequest
         return [
             'start_time' => ['required', 'date'],
             'end_time' => ['required', 'date', 'after:start_time'],
+            'force' => ['sometimes', 'boolean'], // Permitir forçar re-correlação
         ];
     }
 

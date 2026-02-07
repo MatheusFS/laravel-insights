@@ -37,10 +37,23 @@ class IncidentAnalysisService
      *
      * @param string $incidentId Identificador do incidente (ex: INC-2026-001)
      * @param array $incidentData Dados do incidente (started_at, restored_at)
+     * @param bool $force Forçar re-análise mesmo se cache existir
      * @return array Análise de logs (legitimate, suspicious, malicious IPs)
      */
-    public function analyzeLogs(string $incidentId, array $incidentData): array
+    public function analyzeLogs(string $incidentId, array $incidentData, bool $force = false): array
     {
+        // Verificar se análise já existe (cache)
+        if (!$force) {
+            $fileStorageService = app(\MatheusFS\Laravel\Insights\Services\Infrastructure\FileStorageService::class);
+            try {
+                $cached = $fileStorageService->readJsonData($incidentId, 'alb_logs_analysis');
+                \Log::info("analyzeLogs: Cache hit for {$incidentId}, skipping analysis");
+                return $cached;
+            } catch (\RuntimeException $e) {
+                // Cache não existe, segue fluxo normal
+            }
+        }
+        
         $this->checkLock($incidentId, 'analyze_logs');
 
         try {
@@ -114,10 +127,23 @@ class IncidentAnalysisService
      * @param string $incidentId Identificador do incidente
      * @param string $startTime ISO 8601 timestamp
      * @param string $endTime ISO 8601 timestamp
+     * @param bool $force Forçar re-correlação mesmo se cache existir
      * @return array Usuários afetados com logins e requests
      */
-    public function correlateAffectedUsers(string $incidentId, string $startTime, string $endTime): array
+    public function correlateAffectedUsers(string $incidentId, string $startTime, string $endTime, bool $force = false): array
     {
+        // Verificar se correlação já existe (cache)
+        if (!$force) {
+            $fileStorageService = app(\MatheusFS\Laravel\Insights\Services\Infrastructure\FileStorageService::class);
+            try {
+                $cached = $fileStorageService->readJsonData($incidentId, 'affected_users');
+                \Log::info("correlateAffectedUsers: Cache hit for {$incidentId}, skipping correlation");
+                return $cached;
+            } catch (\RuntimeException $e) {
+                // Cache não existe, segue fluxo normal
+            }
+        }
+        
         $this->checkLock($incidentId, 'correlate_users');
 
         try {
@@ -202,48 +228,6 @@ class IncidentAnalysisService
     }
 
     /**
-     * 3. Calcula métricas de impacto
-     *
-     * @param string $incidentId Identificador do incidente
-     * @param string $startTime ISO 8601 timestamp
-     * @param string $endTime ISO 8601 timestamp
-     * @return array Métricas SRE (MTTR, affected_users, error_rate, etc)
-     */
-    public function calculateImpactMetrics(string $incidentId, string $startTime, string $endTime): array
-    {
-        $this->checkLock($incidentId, 'calculate_metrics');
-
-        try {
-            $this->acquireLock($incidentId, 'calculate_metrics');
-
-            // Ler análise de usuários afetados
-            $affected_users_file = "{$this->incidents_base_path}/{$incidentId}/affected_users.json";
-            if (! File::exists($affected_users_file)) {
-                throw new \RuntimeException('Affected users analysis not found. Run correlateAffectedUsers first.');
-            }
-
-            $affectedUsersData = json_decode(File::get($affected_users_file), true);
-            $affectedUsers = $affectedUsersData['users'] ?? [];
-
-            // Delegar para pacote
-            $metrics = $this->correlationService->calculateImpactMetrics(
-                $affectedUsers,
-                ['start' => $startTime, 'end' => $endTime]
-            );
-
-            // Salvar resultado
-            File::put(
-                "{$this->incidents_base_path}/{$incidentId}/incident_metrics.json",
-                json_encode($metrics, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
-            );
-
-            return $metrics;
-        } finally {
-            $this->releaseLock($incidentId, 'calculate_metrics');
-        }
-    }
-
-    /**
      * 4. Gera regras WAF recomendadas
      *
      * @param string $incidentId Identificador do incidente
@@ -287,57 +271,6 @@ class IncidentAnalysisService
         // For now, return a placeholder response
 
         throw new \RuntimeException('WAF rule application not yet implemented. Please apply rules manually using AWS CLI or Console.');
-    }
-
-    /**
-     * 6. Gera análise de impacto completa (orquestra fluxo completo)
-     *
-     * @param string $incidentId Identificador do incidente
-     * @param array $incidentData Dados do incidente (started_at, restored_at)
-     * @return array Analysis data consolidada
-     */
-    public function generateImpactAnalysis(string $incidentId, array $incidentData): array
-    {
-        $this->checkLock($incidentId, 'impact_analysis');
-
-        try {
-            $this->acquireLock($incidentId, 'impact_analysis');
-
-            // Parse timestamps
-            $startTime = $incidentData['start_time']
-                ?? $incidentData['timestamp']['started_at']
-                ?? now()->subHours(1)->toIso8601String();
-
-            $endTime = $incidentData['end_time']
-                ?? $incidentData['timestamp']['restored_at']
-                ?? now()->toIso8601String();
-
-            // Orquestrar fluxo completo
-            $this->analyzeLogs($incidentId, $incidentData);
-            $this->correlateAffectedUsers($incidentId, $startTime, $endTime);
-            $metrics = $this->calculateImpactMetrics($incidentId, $startTime, $endTime);
-
-            // Salvar impacto consolidado
-            $alb_analysis = json_decode(File::get("{$this->incidents_base_path}/{$incidentId}/alb_logs_analysis.json"), true);
-            $affected_users = json_decode(File::get("{$this->incidents_base_path}/{$incidentId}/affected_users.json"), true);
-
-            $impact = [
-                'incident_id' => $incidentId,
-                'metrics' => $metrics,
-                'alb_analysis' => $alb_analysis,
-                'affected_users' => $affected_users,
-                'generated_at' => now()->toIso8601String(),
-            ];
-
-            File::put(
-                "{$this->incidents_base_path}/{$incidentId}/impact.json",
-                json_encode($impact, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
-            );
-
-            return $impact;
-        } finally {
-            $this->releaseLock($incidentId, 'impact_analysis');
-        }
     }
 
     /**

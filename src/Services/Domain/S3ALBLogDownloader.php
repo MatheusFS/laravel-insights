@@ -52,7 +52,22 @@ class S3ALBLogDownloader implements ALBLogDownloaderInterface
 
         // Se já foi baixado e opção 'force' não está ativa, retornar cached
         if (File::exists($day_file) && !($options['force'] ?? false)) {
-            return json_decode(File::get($day_file), true);
+            $cached = json_decode(File::get($day_file), true);
+
+            if (is_array($cached) && isset($cached['by_request_type'])) {
+                $totalRequests = array_sum(array_column($cached['by_request_type'], 'total_requests'));
+                $totalErrors = array_sum(array_column($cached['by_request_type'], 'errors_5xx'));
+
+                if ($totalRequests === 0 && $totalErrors === 0) {
+                    Log::warning("Empty SRE day cache detected, reprocessing {$date->format('Y-m-d')}", [
+                        'day_file' => $day_file,
+                    ]);
+                } else {
+                    return $cached;
+                }
+            } else {
+                return $cached;
+            }
         }
 
         try {
@@ -61,10 +76,15 @@ class S3ALBLogDownloader implements ALBLogDownloaderInterface
             // saiba se deve re-extrair .log mesmo se já existe
             $raw_logs = $this->fetchLogsFromS3($date, $options);
 
-            Log::info("About to analyze {$date->format('Y-m-d')}", [
+            Log::info("Raw logs fetched from S3", [
+                'date' => $date->format('Y-m-d'),
                 'raw_logs_count' => count($raw_logs),
                 'is_array' => is_array($raw_logs),
-                'first_entry_sample' => $raw_logs[0] ?? null,
+                'first_entry_sample' => isset($raw_logs[0]) ? [
+                    'path' => $raw_logs[0]['path'] ?? null,
+                    'status_code' => $raw_logs[0]['status_code'] ?? null,
+                    'timestamp' => $raw_logs[0]['timestamp'] ?? null,
+                ] : null,
             ]);
 
             // Analisar e classificar por tipo de serviço
@@ -115,7 +135,20 @@ class S3ALBLogDownloader implements ALBLogDownloaderInterface
 
         // Iterar sobre cada dia do mês
         for ($date = $start->copy(); $date <= $end; $date->addDay()) {
+            Log::info("Processing day for SRE metrics", [
+                'date' => $date->format('Y-m-d'),
+                'month' => $month,
+            ]);
+            
             $day_logs = $this->downloadForDate($date, $options);
+
+            $day_total = array_sum(array_column($day_logs['by_request_type'], 'total_requests'));
+            Log::info("Day logs aggregated", [
+                'date' => $date->format('Y-m-d'),
+                'total_requests' => $day_total,
+                'api' => $day_logs['by_request_type']['API']['total_requests'] ?? 0,
+                'ui' => $day_logs['by_request_type']['UI']['total_requests'] ?? 0,
+            ]);
 
             // Agregar
             foreach (['API', 'UI', 'BOT', 'ASSETS'] as $service) {
@@ -134,8 +167,15 @@ class S3ALBLogDownloader implements ALBLogDownloaderInterface
         $aggregate_file = $month_dir . '/monthly_aggregate.json';
         File::put($aggregate_file, json_encode($aggregate, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
 
-        Log::info("Logs ALB agregados para o mês {$month}", [
-            'total_requests' => array_sum(array_column($aggregate['by_request_type'], 'total_requests')),
+        $total_requests = array_sum(array_column($aggregate['by_request_type'], 'total_requests'));
+        Log::info("Monthly aggregate saved", [
+            'month' => $month,
+            'file' => $aggregate_file,
+            'total_requests' => $total_requests,
+            'api_requests' => $aggregate['by_request_type']['API']['total_requests'] ?? 0,
+            'ui_requests' => $aggregate['by_request_type']['UI']['total_requests'] ?? 0,
+            'bot_requests' => $aggregate['by_request_type']['BOT']['total_requests'] ?? 0,
+            'assets_requests' => $aggregate['by_request_type']['ASSETS']['total_requests'] ?? 0,
         ]);
 
         return $aggregate;
@@ -161,61 +201,80 @@ class S3ALBLogDownloader implements ALBLogDownloaderInterface
     /**
      * Busca logs do S3 para uma data específica
      * 
-     * IMPORTANTE: Usa startOfDay para ambas as datas para evitar extender para próximo dia
+     * Usa start/end of day UTC para buscar logs de 24h completas
      * 
      * @param Carbon $date
+     * @param array $options
      * @return array Array de entradas de log parseadas
      */
     private function fetchLogsFromS3(Carbon $date, array $options = []): array
     {
-        // Simular incidente para o dia (usa período de 24h)
-        $incident_id = 'SRE-' . $date->format('Y-m-d');
+        // Período de 24h completas (00:00:00 a 23:59:59 UTC)
+        $start_utc = $date->clone()->setTimezone('UTC')->startOfDay();
+        $end_utc = $date->clone()->setTimezone('UTC')->endOfDay();
         
-        // Usar startOfDay para ambos - evita problemas com timezone ao converter para UTC
-        // Usar S3LogDownloaderService para baixar logs
-        // Nota: timestamps são agora carregados do JSON do incidente dentro do método
-        // forceExtraction vem de $options['force'] se fornecido
-        $forceExtraction = $options['force'] ?? false;
-        $result = $this->s3_service->downloadLogsForIncident(
-            $incident_id,
-            useMargins: false,
-            forceExtraction: $forceExtraction
-        );
-
-        // Listar todos os arquivos .log do diretório unificado
-        // IMPORTANTE: Como todos os logs vão para o mesmo diretório (access_logs_path),
-        // aqui pegamos TODOS os logs disponíveis, não apenas do período específico.
-        // A filtragem por timestamp acontece depois, no parseamento dos logs.
-        $log_files = $this->s3_service->listLogsForIncident($incident_id);
-        
-        Log::info("Found {$result['downloaded_count']} files in S3 for {$date->format('Y-m-d')}", [
-            'extracted_count' => $result['extracted_count'],
-            'log_files_to_parse' => count($log_files),
-            'note' => 'Log files from unified directory (may include logs from other periods)',
+        Log::info("Fetching S3 logs for {$date->format('Y-m-d')}", [
+            'start_utc' => $start_utc->toIso8601String(),
+            'end_utc' => $end_utc->toIso8601String(),
         ]);
 
-        // Parsear todos os logs usando LogParserService
-        $parsed_logs = [];
-        $total_files = count($log_files);
-        
-        foreach ($log_files as $index => $log_file) {
-            $current_index = $index + 1;
-            $filename = basename($log_file);
-            Log::info("Parsing file [{$current_index}/{$total_files}]: {$filename}");
+        try {
+            // Baixar e extrair logs diretamente do S3 usando período
+            $result = $this->s3_service->downloadLogsForPeriod(
+                $start_utc,
+                $end_utc,
+                forceExtraction: $options['force'] ?? false
+            );
+
+            // Listar arquivos .log extraídos
+            $all_files = $this->s3_service->listAllFiles();
+            $log_files = $all_files['extracted'] ?? [];
             
-            $entries = $this->log_parser->parseLogFile($log_file);
-            $parsed_logs = array_merge($parsed_logs, $entries);
+            \Log::info("S3 download complete", [
+                'date' => $date->format('Y-m-d'),
+                'downloaded_count' => $result['downloaded_count'],
+                'extracted_count' => $result['extracted_count'],
+                'log_files_count' => count($log_files),
+                'sample_files' => array_slice(array_map('basename', $log_files), 0, 3),
+            ]);
+
+            // Parsear todos os logs
+            $parsed_logs = [];
+            foreach ($log_files as $index => $log_file) {
+                $filename = basename($log_file);
+                
+                \Log::debug("Processing log file [{" . ($index + 1) . "}/" . count($log_files) . "]", [
+                    'filename' => $filename,
+                    'file_path' => $log_file,
+                ]);
+                
+                $entries = $this->log_parser->parseLogFile($log_file);
+                $parsed_logs = array_merge($parsed_logs, $entries);
+                
+                if ($index < 3 || count($entries) > 0) {
+                    \Log::info("Parsed file [" . ($index + 1) . "/" . count($log_files) . "]", [
+                        'filename' => $filename,
+                        'entries_count' => count($entries),
+                    ]);
+                }
+            }
+
+            \Log::info("Parsing complete", [
+                'date' => $date->format('Y-m-d'),
+                'total_files' => count($log_files),
+                'total_entries' => count($parsed_logs),
+                'sample_entry' => $parsed_logs[0] ?? null,
+            ]);
+
+            return $parsed_logs;
+
+        } catch (\Exception $e) {
+            \Log::error("S3 fetch error for {$date->format('Y-m-d')}: {$e->getMessage()}", [
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            return [];
         }
-
-        Log::info("Fetched logs from S3 for {$date->format('Y-m-d')}", [
-            'log_files_count' => count($log_files),
-            'parsed_entries_count' => count($parsed_logs),
-        ]);
-
-        // Limpar arquivos temporários (opcional)
-        // File::deleteDirectory($result['local_path']);
-
-        return $parsed_logs;
     }
 
     /**

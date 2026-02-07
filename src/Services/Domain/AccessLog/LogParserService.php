@@ -101,18 +101,36 @@ class LogParserService
      */
     public function parseLogFile(string $file_path): array
     {
+        \Log::debug("LogParserService::parseLogFile - START", [
+            'file_path' => $file_path,
+            'file_exists' => file_exists($file_path),
+            'timestamp' => now()->toIso8601String(),
+        ]);
+
         if (! file_exists($file_path)) {
             \Log::warning("ALB log file not found: {$file_path}");
             return [];
         }
 
         $lines = file($file_path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        
+        if ($lines === false) {
+            \Log::error("Failed to read file: {$file_path}");
+            return [];
+        }
+
         $total_lines = count($lines);
+        
+        \Log::debug("LogParserService::parseLogFile - FILE READ", [
+            'file_path' => basename($file_path),
+            'total_lines' => $total_lines,
+        ]);
         
         $records = $this->parseLogLines($lines);
         $parsed_count = count($records);
 
         \Log::info("Parsed ALB log file: {$file_path}", [
+            'filename' => basename($file_path),
             'total_lines' => $total_lines,
             'parsed_count' => $parsed_count,
             'success_rate' => $total_lines > 0 ? round(($parsed_count / $total_lines) * 100, 2) . '%' : '0%',
@@ -341,6 +359,11 @@ class LogParserService
             'themes.php',
             'wp-l0gin.php',
             'alfa.php',
+            'radio.php',
+            'wp-trackback.php',
+            'xmrlpc.php',
+            'rip.php',
+            'wp-plain.php',
 
             // Path traversal attempts
             '../',

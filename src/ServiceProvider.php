@@ -46,7 +46,8 @@ class ServiceProvider extends BaseServiceProvider {
         $this->app->singleton(LogParserService::class);
         
         $this->app->singleton(ALBLogDownloaderInterface::class, function ($app) {
-            $source = config('insights.alb_source', 'local');
+            // FIXED: Use correct config key 'insights.alb_logs.source' instead of 'insights.alb_source'
+            $source = config('insights.alb_logs.source', 's3');
             
             if ($source === 's3') {
                 return new S3ALBLogDownloader(

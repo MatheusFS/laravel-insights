@@ -167,11 +167,12 @@ class FileStorageService
     }
 
     /**
-     * Lê JSON de incidente
+     * Lê JSON de incidente (lança exceção se não encontrar)
      *
      * @param  string  $incidentId  ID do incidente
      * @param  string  $filename  Nome do arquivo JSON
      * @return array Dados parseados
+     * @throws \RuntimeException Se arquivo não existir
      */
     public function readJsonData(string $incidentId, string $filename): array
     {
@@ -182,6 +183,29 @@ class FileStorageService
 
         if (!File::exists($filepath)) {
             throw new \RuntimeException("JSON file not found: {$filename} for incident {$incidentId}");
+        }
+
+        return json_decode(File::get($filepath), true);
+    }
+
+    /**
+     * Tenta carregar JSON de incidente (retorna null se não encontrar)
+     * 
+     * Método para uso em cache checking - não lança exceção.
+     *
+     * @param  string  $incidentId  ID do incidente
+     * @param  string  $filename  Nome do arquivo JSON (sem extensão)
+     * @return array|null Dados parseados ou null se não existir
+     */
+    public function loadJsonData(string $incidentId, string $filename): ?array
+    {
+        // Adicionar .json se não tiver
+        $filename = str_ends_with($filename, '.json') ? $filename : $filename . '.json';
+
+        $filepath = $this->getIncidentPath($incidentId) . '/' . $filename;
+
+        if (!File::exists($filepath)) {
+            return null;
         }
 
         return json_decode(File::get($filepath), true);

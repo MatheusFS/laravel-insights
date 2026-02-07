@@ -38,10 +38,6 @@ Route::prefix('incidents/{incidentId}')
         Route::post('correlate-users', [IncidentAnalysisApiController::class, 'correlateUsers'])
             ->name('correlate-users');
 
-        // POST /api/insights/reliability/incidents/{incidentId}/calculate-metrics
-        Route::post('calculate-metrics', [IncidentAnalysisApiController::class, 'calculateMetrics'])
-            ->name('calculate-metrics');
-
         // POST /api/insights/reliability/incidents/{incidentId}/generate-waf-rules
         Route::post('generate-waf-rules', [IncidentAnalysisApiController::class, 'generateWafRules'])
             ->name('generate-waf-rules');

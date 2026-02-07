@@ -5,6 +5,7 @@ namespace MatheusFS\Laravel\Insights\Console\Commands;
 use MatheusFS\Laravel\Insights\Contracts\ALBLogDownloaderInterface;
 use Illuminate\Console\Command;
 use Carbon\Carbon;
+use MatheusFS\Laravel\Insights\ValueObjects\SREMetricsAggregate;
 
 /**
  * Comando para Baixar Logs ALB
@@ -73,19 +74,16 @@ class DownloadALBLogsCommand extends Command
         ];
 
         $logs = $this->downloader->downloadForDate($date, $options);
-
-        $total = $logs['by_request_type']['API']['total_requests'] +
-                 $logs['by_request_type']['UI']['total_requests'] +
-                 $logs['by_request_type']['BOT']['total_requests'] +
-                 $logs['by_request_type']['ASSETS']['total_requests'];
+        $metrics = SREMetricsAggregate::fromArray($logs);
+        $total = $metrics->totalRequests();
 
         $this->info("✅ Logs baixados com sucesso!");
         $this->line("   Data: {$date->format('Y-m-d')}");
         $this->line("   Total de requisições: " . number_format($total));
-        $this->line("     - API: {$logs['by_request_type']['API']['total_requests']} (5xx: {$logs['by_request_type']['API']['errors_5xx']})");
-        $this->line("     - UI: {$logs['by_request_type']['UI']['total_requests']} (5xx: {$logs['by_request_type']['UI']['errors_5xx']})");
-        $this->line("     - BOT: {$logs['by_request_type']['BOT']['total_requests']}");
-        $this->line("     - ASSETS: {$logs['by_request_type']['ASSETS']['total_requests']}");
+        $this->line("     - API: {$metrics->api->total_requests} (5xx: {$metrics->api->errors_5xx})");
+        $this->line("     - UI: {$metrics->ui->total_requests} (5xx: {$metrics->ui->errors_5xx})");
+        $this->line("     - BOT: {$metrics->bot->total_requests}");
+        $this->line("     - ASSETS: {$metrics->assets->total_requests}");
 
         return Command::SUCCESS;
     }
@@ -110,19 +108,16 @@ class DownloadALBLogsCommand extends Command
         ];
 
         $aggregate = $this->downloader->downloadForMonth($month, $options);
-
-        $total = $aggregate['by_request_type']['API']['total_requests'] +
-                 $aggregate['by_request_type']['UI']['total_requests'] +
-                 $aggregate['by_request_type']['BOT']['total_requests'] +
-                 $aggregate['by_request_type']['ASSETS']['total_requests'];
+        $metrics = SREMetricsAggregate::fromArray($aggregate);
+        $total = $metrics->totalRequests();
 
         $this->info("✅ Logs mensais agregados com sucesso!");
         $this->line("   Período: {$month}");
         $this->line("   Total de requisições: " . number_format($total));
-        $this->line("     - API: {$aggregate['by_request_type']['API']['total_requests']} (5xx: {$aggregate['by_request_type']['API']['errors_5xx']})");
-        $this->line("     - UI: {$aggregate['by_request_type']['UI']['total_requests']} (5xx: {$aggregate['by_request_type']['UI']['errors_5xx']})");
-        $this->line("     - BOT: {$aggregate['by_request_type']['BOT']['total_requests']}");
-        $this->line("     - ASSETS: {$aggregate['by_request_type']['ASSETS']['total_requests']}");
+        $this->line("     - API: {$metrics->api->total_requests} (5xx: {$metrics->api->errors_5xx})");
+        $this->line("     - UI: {$metrics->ui->total_requests} (5xx: {$metrics->ui->errors_5xx})");
+        $this->line("     - BOT: {$metrics->bot->total_requests}");
+        $this->line("     - ASSETS: {$metrics->assets->total_requests}");
 
         return Command::SUCCESS;
     }

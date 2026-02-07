@@ -217,31 +217,6 @@ class IncidentCorrelationService
     }
 
     /**
-     * 3. METRICS - Calcula impacto
-     *
-     * @param  array  $affectedUsers  Usuários afetados (retorno de correlateAffectedUsers)
-     * @param  array  $timeWindow  ['start' => ISO 8601, 'end' => ISO 8601]
-     * @return array Métricas de impacto
-     */
-    public function calculateImpactMetrics(array $affectedUsers, array $timeWindow): array
-    {
-        $totalUsers = count($affectedUsers);
-        $totalRequests = array_sum(array_column($affectedUsers, 'requests'));
-        $totalErrors = array_sum(array_column($affectedUsers, 'errors'));
-
-        $errorRate = $totalRequests > 0 ? ($totalErrors / $totalRequests) * 100 : 0;
-
-        return [
-            'users_affected' => $totalUsers,
-            'requests_total' => $totalRequests,
-            'requests_failed' => $totalErrors,
-            'error_rate' => round($errorRate, 2),
-            'time_window' => $timeWindow,
-            'calculated_at' => now()->toIso8601String(),
-        ];
-    }
-
-    /**
      * 4. WAF RULES - Gera regras de bloqueio
      *
      * @param  array  $maliciousIps  IPs classificados como maliciosos

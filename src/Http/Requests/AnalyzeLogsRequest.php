@@ -25,6 +25,7 @@ class AnalyzeLogsRequest extends FormRequest
             'incident_data.timestamp' => ['required', 'array'],
             'incident_data.timestamp.started_at' => ['required', 'date'],
             'incident_data.timestamp.restored_at' => ['nullable', 'date'],
+            'force' => ['sometimes', 'boolean'], // Permitir forçar re-análise
         ];
     }
 

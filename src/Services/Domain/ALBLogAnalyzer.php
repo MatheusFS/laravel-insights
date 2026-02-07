@@ -60,12 +60,20 @@ class ALBLogAnalyzer
             }
         }
 
-        \Log::info("ALBLogAnalyzer result for {$date->format('Y-m-d')}", [
+        $total_classified = array_sum(array_column($aggregate['by_request_type'], 'total_requests'));
+        
+        \Log::info("ALBLogAnalyzer result", [
+            'date' => $date->format('Y-m-d'),
             'input_count' => count($logs),
+            'total_classified' => $total_classified,
             'API_count' => $aggregate['by_request_type']['API']['total_requests'],
             'UI_count' => $aggregate['by_request_type']['UI']['total_requests'],
             'BOT_count' => $aggregate['by_request_type']['BOT']['total_requests'],
             'ASSETS_count' => $aggregate['by_request_type']['ASSETS']['total_requests'],
+            'sample_log' => isset($logs[0]) && is_array($logs[0]) ? [
+                'path' => $logs[0]['path'] ?? null,
+                'request_type' => $logs[0]['request_type'] ?? null,
+            ] : null,
         ]);
 
         return $aggregate;

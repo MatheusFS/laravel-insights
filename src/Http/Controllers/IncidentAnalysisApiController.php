@@ -9,6 +9,7 @@ use MatheusFS\Laravel\Insights\Http\Requests\GenerateWAFRulesRequest;
 use MatheusFS\Laravel\Insights\Services\Application\IncidentAnalysisService;
 use MatheusFS\Laravel\Insights\Services\Domain\Metrics\SREMetricsCalculator;
 use MatheusFS\Laravel\Insights\Contracts\ALBLogDownloaderInterface;
+use MatheusFS\Laravel\Insights\Jobs\DownloadSRELogsJob;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 
@@ -44,9 +45,12 @@ class IncidentAnalysisApiController extends Controller
     public function analyzeLogs(AnalyzeLogsRequest $request, string $incidentId): JsonResponse
     {
         try {
+            $force = $request->validated('force', false);
+            
             $result = $this->analysisService->analyzeLogs(
                 $incidentId,
-                $request->validated('incident_data')
+                $request->validated('incident_data'),
+                $force
             );
 
             return response()->json([
@@ -89,62 +93,18 @@ class IncidentAnalysisApiController extends Controller
     public function correlateUsers(CorrelateUsersRequest $request, string $incidentId): JsonResponse
     {
         try {
+            $force = $request->validated('force', false);
+            
             $result = $this->analysisService->correlateAffectedUsers(
                 $incidentId,
                 $request->validated('start_time'),
-                $request->validated('end_time')
+                $request->validated('end_time'),
+                $force
             );
 
             return response()->json([
                 'success' => true,
                 'data' => $result,
-            ]);
-        } catch (\RuntimeException $e) {
-            if (str_starts_with($e->getMessage(), 'PROCESSING_LOCKED')) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Processamento já em andamento para este incidente',
-                    'incident_id' => $incidentId,
-                ], 409);
-            }
-
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage(),
-            ], 404);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Internal server error',
-                'message' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * POST /api/insights/reliability/incidents/{incidentId}/calculate-metrics
-     *
-     * Calcula métricas de impacto
-     * 
-     * Request Body:
-     * {
-     *   "start_time": "2026-01-15T10:00:00Z",
-     *   "end_time": "2026-01-15T10:30:00Z"
-     * }
-     */
-    public function calculateMetrics(CorrelateUsersRequest $request, string $incidentId): JsonResponse
-    {
-        try {
-            $metrics = $this->analysisService->calculateImpactMetrics(
-                $incidentId,
-                $request->validated('start_time'),
-                $request->validated('end_time')
-            );
-
-            return response()->json([
-                'success' => true,
-                'data' => $metrics,
-                'message' => 'Metrics calculated and saved to incident_metrics.json',
             ]);
         } catch (\RuntimeException $e) {
             if (str_starts_with($e->getMessage(), 'PROCESSING_LOCKED')) {
@@ -369,8 +329,11 @@ class IncidentAnalysisApiController extends Controller
      * GET /api/insights/reliability/sre-metrics
      *
      * Calcula métricas SRE (SLI, SLO, SLA, Error Budget) de logs contínuos
+     *      * IMPORTANTE: Requer que logs ALB tenham sido baixados previamente via comando:
+     *   php artisan alb:download-logs --month=2026-02
      * 
-     * Query params:
+     * Sem isso, as métricas estarão zeradas pois os logs não estão no storage.
+     *      * Query params:
      * - month: Período em formato Y-m (padrão: mês atual, ex: 2026-02)
      * - slo_target: Meta SLO (padrão: 98.5%)
      * - sla_target: Meta SLA (padrão: 95%)
@@ -401,6 +364,26 @@ class IncidentAnalysisApiController extends Controller
                 $slo_target,
                 $sla_target
             );
+            
+            // Verificar se há dados reais (detectar quando logs não foram baixados)
+            $total_requests_api = $metrics['services']['API']['raw']['total_requests'] ?? 0;
+            $total_requests_ui = $metrics['services']['UI']['raw']['total_requests'] ?? 0;
+            $has_data = ($total_requests_api + $total_requests_ui) > 0;
+            
+            if (!$has_data) {
+                // Disparar download em background
+                DownloadSRELogsJob::dispatch($month, false);
+                
+                \Log::info("SRE Metrics: Disparado download automático de logs para {$month}");
+                
+                return response()->json([
+                    'success' => false,
+                    'error' => 'processing',
+                    'message' => 'Logs ALB estão sendo baixados em background. Aguarde 2-5 minutos e tente novamente.',
+                    'estimated_time_minutes' => 5,
+                    'data' => $metrics, // Retornar estrutura vazia para compatibilidade
+                ], 202); // 202 Accepted
+            }
 
             return response()->json([
                 'success' => true,
