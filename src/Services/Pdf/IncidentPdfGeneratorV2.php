@@ -98,7 +98,7 @@ class IncidentPdfGeneratorV2
         ];
 
         // Get severity color class
-        $severityColor = $this->getSeverityColorClass($classification['severity_level'] ?? 'S3');
+        $severityColor = $this->getSeverityColor($classification['severity_level'] ?? 'S3');
         $slaBreached = $impact['sla_breached'] ?? false;
 
         return [
@@ -273,6 +273,20 @@ class IncidentPdfGeneratorV2
             'external' => 'Dependência Externa',
             'other' => 'Outro',
             default => 'Não especificado',
+        };
+    }
+
+    /**
+     * Map severity level to HEX color for PDFs
+     */
+    protected function getSeverityColor(string $severityLevel): string
+    {
+        return match ($severityLevel) {
+            'S0' => '#d32f2f',  // Critical - Red
+            'S1' => '#f57c00',  // High - Orange
+            'S2' => '#fbc02d',  // Medium - Yellow
+            'S3' => '#388e3c',  // Low - Green
+            default => '#388e3c',
         };
     }
 
