@@ -5,7 +5,7 @@ namespace MatheusFS\Laravel\Insights\Services\Pdf;
 use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
-use MatheusFS\Laravel\Insights\Helpers\IconGenerator;
+use MatheusFS\Laravel\Insights\Helpers\EmojiPath;
 
 /**
  * Incident PDF Generator (V2)
@@ -103,41 +103,48 @@ class IncidentPdfGeneratorV2
 
         return [
             'incident' => [
-                'id' => $incident['id'] ?? 'unknown',
-                'status' => $incident['status'] ?? 'unknown',
-                'status_label' => $this->getStatusLabel($incident['status'] ?? 'unknown'),
-                'environment' => strtoupper($incident['environment'] ?? 'unknown'),
-                'is_open' => in_array($incident['status'] ?? 'resolved', ['open', 'investigating', 'detected']),
-                'oncall' => $incident['oncall'] ?? 'Não registrado',
-                'artifacts_dir' => $incident['artifacts_dir'] ?? '',
+                'id' => $this->ensureString($incident['id'] ?? 'unknown'),
+                'status' => $this->ensureString($incident['status'] ?? 'unknown'),
+                'status_label' => $this->getStatusLabel($this->ensureString($incident['status'] ?? 'unknown')),
+                'environment' => strtoupper($this->ensureString($incident['environment'] ?? 'unknown')),
+                'is_open' => in_array($this->ensureString($incident['status'] ?? 'resolved'), ['open', 'investigating', 'detected']),
+                'oncall' => $this->ensureString($incident['oncall'] ?? 'Não registrado'),
+                'artifacts_dir' => $this->ensureString($incident['artifacts_dir'] ?? ''),
+                'severity_color' => $severityColor,
             ],
             'timestamp' => $timelineFormatted,
             'classification' => [
-                'error_type' => $this->formatErrorType($classification['error_type'] ?? 'unknown'),
-                'severity' => $classification['severity'] ?? 'Normal',
-                'severity_level' => $classification['severity_level'] ?? 'S3',
+                'error_type' => $this->formatErrorType($this->ensureString($classification['error_type'] ?? 'unknown')),
+                'severity' => $this->ensureString($classification['severity'] ?? 'Normal'),
+                'severity_level' => $this->ensureString($classification['severity_level'] ?? 'S3'),
                 'severity_color' => $severityColor,
                 'metric_value' => $classification['metric_value'] ?? 0,
-                'metric_unit' => $classification['metric_unit'] ?? '%',
+                'metric_unit' => $this->ensureString($classification['metric_unit'] ?? '%'),
             ],
             'impact' => [
-                'description' => $impact['description'] ?? 'Não descrito',
+                'description' => $this->ensureString($impact['description'] ?? 'Não descrito'),
                 'users_affected' => $affectedUsersCount,
                 'sla_breached' => $slaBreached,
                 'sla_status' => $slaBreached ? 'SLA VIOLADO' : 'Dentro do SLA',
                 'sla_class' => $slaBreached ? 'badge-critical' : 'badge-low',
             ],
-            'root_cause' => $incident['root_cause'] ?? 'Investigação pendente',
+            'root_cause' => $this->ensureString($incident['root_cause'] ?? 'Investigação pendente'),
             'remediation' => [
-                'immediate' => $remediation['immediate'] ?? 'Não registrado',
-                'short_term' => $remediation['short_term'] ?? 'Não registrado',
-                'long_term' => $remediation['long_term'] ?? 'Não registrado',
+                'immediate' => $this->ensureString($remediation['immediate'] ?? 'Não registrado'),
+                'short_term' => $this->ensureString($remediation['short_term'] ?? 'Não registrado'),
+                'long_term' => $this->ensureString($remediation['long_term'] ?? 'Não registrado'),
             ],
-            'action_items' => $incident['action_items'] ?? [],
-            'metrics' => $metrics,
+            'action_items' => $this->ensureArrayOfStrings($incident['action_items'] ?? []),
+            'metrics' => [
+                'ttd' => $metrics['ttd']['formatted'] ?? '—',
+                'ttcy' => $metrics['ttcy']['formatted'] ?? '—',
+                'ttr' => $metrics['ttr']['formatted'] ?? '—',
+                'ttrad' => $metrics['ttrad']['formatted'] ?? '—',
+                'ttc' => $metrics['ttc']['formatted'] ?? '—',
+            ],
             'generated_at' => now()->setTimezone('America/Sao_Paulo')->format('d/m/Y H:i:s'),
             'company' => 'Continuo Tecnologia',
-            'icons' => IconGenerator::getIconArray(),
+            'icons' => EmojiPath::getIconArray(),
         ];
     }
 
@@ -321,5 +328,27 @@ class IncidentPdfGeneratorV2
         } catch (\Exception) {
             return 0;
         }
+    }
+
+    /**
+     * Ensure a value is a string (convert arrays to string)
+     */
+    protected function ensureString($value): string
+    {
+        if (is_array($value)) {
+            return implode(', ', array_filter($value, 'is_scalar'));
+        }
+        return (string) $value;
+    }
+
+    /**
+     * Ensure a value is an array of strings
+     */
+    protected function ensureArrayOfStrings($value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+        return array_map(fn($item) => $this->ensureString($item), $value);
     }
 }

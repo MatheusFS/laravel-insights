@@ -4,17 +4,24 @@
 
 @section('content')
     {{-- ============================================================================
-         ICONS: Provided by IncidentPdfGeneratorV2.php via IconGenerator
+         IMAGENS PNG DO PROJETO
          
-         Icons are file-based PNG stored in storage/app/pdf-icons/
-         IconGenerator (MatheusFS\Laravel\Insights\Helpers\IconGenerator) automatically
-         generates PNG files for:
-         - 10 colors: blue, red, orange, yellow, green, gray, purple, cyan, pink, teal
-         - 7 types: dot, square, triangle, check, x, warning, info
+         LOGO: LogoPath helper
+         - Localização: assets/icone_regular.png (centralizado)
+         - Uso: LogoPath::get(), LogoPath::getUri(), LogoPath::exists()
+         - Compatível com DOMPDF 3.x via file:// protocol
          
-         Usage in template: <img src="{{ $icons['color_type'] }}" width="11" height="11" />
+         ÍCONES E EMOJIS: EmojiPath helper
+         - Localização: public/emojis/{source}/{codepoint}.png (ex: public/emojis/twemoji/1f534.png)
+         - Fontes: twemoji (MIT) ou noto (Apache 2.0)
+         - Ícones coloridos mapeados como: blue_info, blue_dot, red_dot, orange_warning, green_check
+         - Uso: $icons array passado pelo IncidentPdfGeneratorV2 (EmojiPath::getIconArray())
+         - Exemplo emoji customizado: EmojiPath::getUri('1f600') para 😀
          ============================================================================ --}}
     @php
+        use MatheusFS\Laravel\Insights\Helpers\LogoPath;
+        use MatheusFS\Laravel\Insights\Helpers\EmojiPath;
+        
         $icons = $icons ?? [];
         $iconSize = 11;
     @endphp
@@ -26,10 +33,18 @@
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
             <tr>
                 <td style="width: 80px; vertical-align: top;">
-                    @if(file_exists(public_path('images/logo.png')))
-                        <img src="{{ public_path('images/logo.png') }}" alt="Logo" style="width: 70px; height: auto;" />
+                    {{-- ============================================================================
+                         LOGO: Centralizado via LogoPath helper
+                         - Arquivo: assets/icone_regular.png
+                         - URI: file:// protocol (compatível DOMPDF 3.x)
+                         ============================================================================ --}}
+                    @php
+                        $logoUri = LogoPath::exists() ? LogoPath::getUri() : '';
+                    @endphp
+                    @if($logoUri)
+                        <img src="{{ $logoUri }}" alt="Logo Continuo Tecnologia" style="width: 70px; height: auto;" />
                     @else
-                        <div style="width: 70px; height: 70px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #999;">Logo</div>
+                        <div style="width: 70px; height: 70px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #999;">CT</div>
                     @endif
                 </td>
                 <td style="padding-left: 15px; vertical-align: middle;">
@@ -248,5 +263,37 @@
         <p style="margin: 0;">Este documento foi gerado automaticamente pelo sistema de monitoramento de incidentes.</p>
         <p style="margin: 5px 0 0 0;">Para dúvidas, entre em contato com o time de SRE ou Operações.</p>
     </div>
+
+    {{-- ============================================================================
+         EXEMPLO: Como usar EmojiPath para adicionar emojis customizados
+         
+         Os ícones do PDF ($icons) são gerados automaticamente via EmojiPath::getIconArray()
+         Para adicionar emojis customizados além dos ícones padrão, descomente:
+         
+         <div style="margin-top: 20px; padding: 10px; background: #f0f0f0; border-radius: 4px;">
+             @php
+                 $emojiAlert = EmojiPath::exists('26a0') ? EmojiPath::getUri('26a0') : '';
+             @endphp
+             @if($emojiAlert)
+                 <img src="{{ $emojiAlert }}" width="24" height="24" style="vertical-align: middle; margin-right: 8px;" alt="Alert" />
+             @endif
+             <strong>Alerta:</strong> Emojis PNG podem ser adicionados via EmojiPath helper
+         </div>
+         
+         Ícones padrão do PDF (mapeados via EmojiPath::getIconArray()):
+         - blue_info = 2139 (ℹ️)
+         - blue_dot = 1f535 (🔵)
+         - red_dot = 1f534 (🔴)
+         - orange_warning = 26a0 (⚠️)
+         - green_check = 2705 (✅)
+         
+         Codepoints comuns para adicionar:
+         - 1f4a9 = 💩 Error
+         - 1f4a1 = 💡 Idea
+         - 26a0 = ⚠️ Warning
+         - 2705 = ✅ Check/Success
+         - 274c = ❌ X/Error
+         
+         ============================================================================ --}}
 
 @endsection
