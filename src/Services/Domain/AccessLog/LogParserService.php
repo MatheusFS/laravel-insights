@@ -15,6 +15,20 @@ class LogParserService
      *
      * @param  string  $line  Linha bruta do log
      * @return array|null Array com campos extraídos ou null se inválido
+     * 
+     * Estrutura retornada (quando válida):
+     * - 'timestamp' (string): ISO 8601 timestamp
+     * - 'elb_status_code' (int): Código HTTP retornado pelo ELB (não usar para contar erros!)
+     * - 'target_status_code' (int): Código HTTP do servidor backend (USE ESTE para detectar 5xx!)
+     * - 'path' (string): URL path normalizado
+     * - 'user_agent' (string): User-Agent header
+     * - 'request_type' (string): 'API'|'UI'|'BOT'|'ASSETS'
+     * - 'client_ip' (string): IP do cliente
+     * - 'method' (string): HTTP method (GET, POST, etc)
+     * - 'is_staging' (bool): Se a request foi para staging
+     * - ... outros campos (ver código para lista completa)
+     * 
+     * @see ALBLogAnalyzer::processLogEntry() Consome este formato
      */
     public function parseLogLine(string $line): ?array
     {

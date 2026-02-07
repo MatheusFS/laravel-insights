@@ -60,32 +60,17 @@ class ALBLogAnalyzer
             }
         }
 
-        $total_classified = array_sum(array_column($aggregate['by_request_type'], 'total_requests'));
-        
-        \Log::info("ALBLogAnalyzer result", [
-            'date' => $date->format('Y-m-d'),
-            'input_count' => count($logs),
-            'total_classified' => $total_classified,
-            'API_count' => $aggregate['by_request_type']['API']['total_requests'],
-            'API_errors_5xx' => $aggregate['by_request_type']['API']['errors_5xx'],
-            'UI_count' => $aggregate['by_request_type']['UI']['total_requests'],
-            'UI_errors_5xx' => $aggregate['by_request_type']['UI']['errors_5xx'],
-            'BOT_count' => $aggregate['by_request_type']['BOT']['total_requests'],
-            'ASSETS_count' => $aggregate['by_request_type']['ASSETS']['total_requests'],
-            'sample_log' => isset($logs[0]) && is_array($logs[0]) ? [
-                'path' => $logs[0]['path'] ?? null,
-                'request_type' => $logs[0]['request_type'] ?? null,
-            ] : null,
-        ]);
-
         return $aggregate;
     }
 
     /**
      * Processa uma entrada individual de log
      * 
-     * @param array $log Entrada de log ALB
+     * @param array $log Entrada de log ALB retornada por LogParserService::parseLogLine()
+     *                   DEVE conter 'target_status_code' (int) para detectar erros 5xx
      * @param array &$aggregate Agregação a atualizar
+     * 
+     * @see LogParserService::parseLogLine() Formato de entrada esperado
      */
     private function processLogEntry(array $log, array &$aggregate): void
     {
@@ -93,8 +78,8 @@ class ALBLogAnalyzer
             return;
         }
 
-        // Detectar tipo de requisição
-        $service_type = $this->detectServiceType($log);
+        // Usar request_type se já estiver no log parseado, senão detectar
+        $service_type = $log['request_type'] ?? $this->detectServiceType($log);
 
         // Contar requisição
         $aggregate['by_request_type'][$service_type]['total_requests']++;
