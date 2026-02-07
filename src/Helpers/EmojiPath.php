@@ -152,46 +152,29 @@ class EmojiPath
     }
 
     /**
-     * Get icon array for PDF (substitui IconGenerator::getIconArray())
-     * Mapeia nomes de ícones para codepoints (compatível com templates legacy)
+     * Get icon array for PDF (simplificado - usa codepoints diretos)
+     * Retorna array com codepoint como chave, file:// URI como valor
      * 
-     * @return array [icon_name => file:// URI]
+     * @return array [codepoint => file:// URI]  ex: ['2139' => 'file://...', '26a0' => 'file://...']
      */
     public static function getIconArray(): array
     {
-        $iconMap = [
-            // Identificação (blue_info)
-            'blue_info' => '2139',       // ℹ️ Blue info
-
-            // Classificação (orange_warning)
-            'orange_warning' => '26a0',  // ⚠️ Orange warning
-
-            // Impacto (blue_info)
-            // 'blue_info' já definido acima
-
-            // Timeline (red_dot)
-            'red_dot' => '1f534',        // 🔴 Red dot
-
-            // Métricas (green_check)
-            'green_check' => '2705',     // ✅ Green check
-
-            // Causa Raiz (orange_warning)
-            // 'orange_warning' já definido acima
-
-            // Remediação (green_check)
-            // 'green_check' já definido acima
-
-            // Ações (blue_info)
-            // 'blue_info' já definido acima
+        // Ícones principais do PDF - uso direto de codepoints
+        $codepoints = [
+            '2139',     // ℹ️ Info (blue_info)
+            '26a0',     // ⚠️ Warning (orange_warning)
+            '1f534',    // 🔴 Red dot
+            '1f535',    // 🔵 Blue dot
+            '2705',     // ✅ Check (green_check)
         ];
 
         $icons = [];
-        foreach ($iconMap as $name => $codepoint) {
+        foreach ($codepoints as $codepoint) {
             $path = self::get($codepoint);
             // Retorna file:// URI compatível com DOMPDF
-            $icons[$name] = self::exists($codepoint) 
+            $icons[$codepoint] = self::exists($codepoint) 
                 ? 'file://' . $path 
-                : '';  // Empty string se emoji não existir
+                : '';
         }
 
         return $icons;

@@ -67,8 +67,8 @@
          ============================================================================ --}}
     <div class="section" style="margin-bottom: 20px; padding: 12px; background: #f9f9f9; border-left: 4px solid #1976d2;">
         <h2 style="margin: 0 0 10px 0; font-size: 13px; font-weight: bold; color: #1976d2;">
-            @if(!empty($icons['blue_info']))
-                <img src="{{ $icons['blue_info'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Info" />
+            @if(!empty($icons['2139']))
+                <img src="{{ $icons['2139'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Info" />
             @endif
             IDENTIFICAÇÃO
         </h2>
@@ -93,8 +93,8 @@
          ============================================================================ --}}
     <div class="section" style="margin-bottom: 20px; padding: 12px; background: #f9f9f9; border-left: 4px solid #f57c00;">
         <h2 style="margin: 0 0 10px 0; font-size: 13px; font-weight: bold; color: #f57c00;">
-            @if(!empty($icons['orange_warning']))
-                <img src="{{ $icons['orange_warning'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Warning" />
+            @if(!empty($icons['26a0']))
+                <img src="{{ $icons['26a0'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Warning" />
             @endif
             CLASSIFICAÇÃO
         </h2>
@@ -119,8 +119,8 @@
          ============================================================================ --}}
     <div class="section" style="margin-bottom: 20px; padding: 12px; background: #f9f9f9; border-left: 4px solid #1976d2;">
         <h2 style="margin: 0 0 10px 0; font-size: 13px; font-weight: bold; color: #1976d2;">
-            @if(!empty($icons['blue_info']))
-                <img src="{{ $icons['blue_info'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Info" />
+            @if(!empty($icons['2139']))
+                <img src="{{ $icons['2139'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Info" />
             @endif
             IMPACTO
         </h2>
@@ -143,8 +143,8 @@
          ============================================================================ --}}
     <div class="section" style="margin-bottom: 20px; padding: 12px; background: #f9f9f9; border-left: 4px solid #d32f2f;">
         <h2 style="margin: 0 0 10px 0; font-size: 13px; font-weight: bold; color: #d32f2f;">
-            @if(!empty($icons['red_dot']))
-                <img src="{{ $icons['red_dot'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Timeline" />
+            @if(!empty($icons['1f534']))
+                <img src="{{ $icons['1f534'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Timeline" />
             @endif
             TIMELINE DO INCIDENTE
         </h2>
@@ -173,8 +173,8 @@
          ============================================================================ --}}
     <div class="section" style="margin-bottom: 20px; padding: 12px; background: #f9f9f9; border-left: 4px solid #388e3c;">
         <h2 style="margin: 0 0 10px 0; font-size: 13px; font-weight: bold; color: #388e3c;">
-            @if(!empty($icons['green_check']))
-                <img src="{{ $icons['green_check'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Metrics" />
+            @if(!empty($icons['2705']))
+                <img src="{{ $icons['2705'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Metrics" />
             @endif
             MÉTRICAS SRE
         </h2>
@@ -203,8 +203,8 @@
          ============================================================================ --}}
     <div class="section" style="margin-bottom: 20px; padding: 12px; background: #f9f9f9; border-left: 4px solid #f57c00;">
         <h2 style="margin: 0 0 10px 0; font-size: 13px; font-weight: bold; color: #f57c00;">
-            @if(!empty($icons['orange_warning']))
-                <img src="{{ $icons['orange_warning'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Root Cause" />
+            @if(!empty($icons['26a0']))
+                <img src="{{ $icons['26a0'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Root Cause" />
             @endif
             CAUSA RAIZ
         </h2>
@@ -216,8 +216,8 @@
          ============================================================================ --}}
     <div class="section" style="margin-bottom: 20px; padding: 12px; background: #f9f9f9; border-left: 4px solid #388e3c;">
         <h2 style="margin: 0 0 10px 0; font-size: 13px; font-weight: bold; color: #388e3c;">
-            @if(!empty($icons['green_check']))
-                <img src="{{ $icons['green_check'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Remediation" />
+            @if(!empty($icons['2705']))
+                <img src="{{ $icons['2705'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Remediation" />
             @endif
             REMEDIAÇÃO
         </h2>
@@ -243,8 +243,8 @@
     @if(!empty($action_items) && is_array($action_items))
     <div class="section" style="margin-bottom: 20px; padding: 12px; background: #f9f9f9; border-left: 4px solid #1976d2;">
         <h2 style="margin: 0 0 10px 0; font-size: 13px; font-weight: bold; color: #1976d2;">
-            @if(!empty($icons['blue_info']))
-                <img src="{{ $icons['blue_info'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Actions" />
+            @if(!empty($icons['2139']))
+                <img src="{{ $icons['2139'] }}" width="{{ $iconSize }}" height="{{ $iconSize }}" style="vertical-align: -1px; margin-right: 6px;" alt="Actions" />
             @endif
             ITENS DE AÇÃO
         </h2>

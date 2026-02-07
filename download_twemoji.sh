@@ -20,23 +20,58 @@ TARGET_DIR="resources/emojis/twemoji"
 PROJECT_ROOT=$(pwd)
 
 # Emojis comuns para usar em PDFs (unicode codepoints)
+# Seleção abrangente com 40+ emojis úteis
 EMOJI_CODEPOINTS=(
+    # PDF Icons (5)
+    "2139"      # ℹ️ Info
+    "26a0"      # ⚠️ Warning
+    "1f534"     # 🔴 Red circle
+    "1f535"     # 🔵 Blue circle
+    "2705"      # ✅ Check Mark
+    
+    # Status (7)
     "2714"      # ✔️ Checkmark
     "274c"      # ❌ Cross
-    "26a0"      # ⚠️ Warning
-    "2139"      # ℹ️ Info
+    "274e"      # ❌ Cross Mark
+    "2716"      # ✖️ Heavy Multiplication X
+    "1f504"     # 🔄 Repeat
+    "1f6a8"     # 🚨 Alert/Siren
+    "1f6ab"     # 🚫 No Entry
+    
+    # Actions (8)
     "1f525"     # 🔥 Fire
-    "1f550"     # 🕐 Clock
-    "2b55"      # 🔵 Blue Circle (dot)
-    "2b50"      # ⭐ Star
-    "1f44c"     # 👌 OK Hand
-    "1f44e"     # 👎 Thumbs Down
-    "1f44d"     # 👍 Thumbs Up
-    "1f6a8"     # 🚨 Alert
     "1f4a8"     # 💨 Dashing Away
-    "1f4af"     # 💯 100 Points
-    "2705"      # ✅ Check Mark Button
+    "1f4a9"     # 💩 Pile of Poo
+    "1f4a1"     # 💡 Bulb
+    "1f4aa"     # 💪 Muscle
+    "1f44c"     # 👌 OK Hand
+    "1f44d"     # 👍 Thumbs Up
+    "1f44e"     # 👎 Thumbs Down
+    
+    # Time (5)
+    "1f550"     # 🕐 Clock
+    "1f551"     # 🕑 Clock
+    "1f552"     # 🕒 Clock
+    "23f1"      # ⏱️ Stopwatch
+    "23f0"      # ⏰ Alarm Clock
+    
+    # Objects (8)
+    "1f4dd"     # 📝 Memo
+    "1f4c1"     # 📁 Folder
+    "1f4c4"     # 📄 Page
+    "1f512"     # 🔒 Lock
+    "1f513"     # 🔓 Unlock
+    "1f50d"     # 🔍 Magnifying Glass
+    "1f6e0"     # 🛠️ Tools
+    "2699"      # ⚙️ Gear
+    
+    # Nature (4)
+    "1f49a"     # 💚 Green Heart
+    "1f49b"     # 💛 Yellow Heart
+    "1f49c"     # 💜 Purple Heart
+    "1f534"     # ❤️ Red Heart (redundant but included)
 )
+
 
 echo "🎨 Twemoji Downloader para Laravel Insights"
 echo "==========================================="
