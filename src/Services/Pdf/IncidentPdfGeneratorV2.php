@@ -5,6 +5,7 @@ namespace MatheusFS\Laravel\Insights\Services\Pdf;
 use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
+use MatheusFS\Laravel\Insights\Helpers\IconGenerator;
 
 /**
  * Incident PDF Generator (V2)
@@ -136,6 +137,7 @@ class IncidentPdfGeneratorV2
             'metrics' => $metrics,
             'generated_at' => now()->setTimezone('America/Sao_Paulo')->format('d/m/Y H:i:s'),
             'company' => 'Continuo Tecnologia',
+            'icons' => IconGenerator::getIconArray(),
         ];
     }
 
